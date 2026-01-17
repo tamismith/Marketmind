@@ -59,5 +59,24 @@ Connect Flask backend to a local database instance.
 Start drafting frontend wireframes and user flow diagrams.
 Add input validation and error handling to the AI caption endpoint.
 
+## Week 4 [12/01/26 – 17/01/26]
+
+### Summary of Work
+This week, I focused on making corrections to my interim report based on the feedback I received. I improved the structure and clarity of several sections, including the literature review, system design, and business development parts of the report.
+
+I also reviewed my overall project plan and finalised preparation to begin backend development next week beyond file structure.
+
+### Progress Made
+- Made corrections and improvements to the interim report  
+- Improved clarity and organisation of academic writing  
+- Addressed feedback related to structure and explanation  
+- Finalised plans to start backend development next week  
+
+### Reflection
+Working on the interim report corrections helped me better understand how to present my ideas clearly and academically. Addressing feedback allowed me to strengthen weaker sections of the report and improved my confidence moving forward into the development phase.
+
+### Next Steps
+- Begin backend development using Flask   
+- Start implementing basic backend functionality  
 
 
