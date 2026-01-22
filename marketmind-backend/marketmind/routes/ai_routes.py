@@ -11,7 +11,8 @@ REQUIRED_FIELDS = [
     "target_audience",
     "tone",
     "platform",
-    "description"
+    "description",
+    "region"
 ]
 
 
@@ -30,6 +31,8 @@ def caption_endpoint():
       "description": "Affordable coffee and snacks near campus",
       "goal": "Increase foot traffic",
       "length": "short"
+      "region": "UK"
+
     }
 
     Returns JSON:
@@ -68,10 +71,12 @@ def caption_endpoint():
         tone = data["tone"].strip()
         platform = data["platform"].strip()
         description = data["description"].strip()
+       
 
         #  Optional fields (safe defaults)
         goal = (data.get("goal") or "").strip()
         length = (data.get("length") or "short").strip()
+        region = (data.get("region") or "UK").strip()
 
         #  Call controller (controller calls AI service)
         caption = generate_caption(
@@ -82,7 +87,8 @@ def caption_endpoint():
             platform=platform,
             description=description,
             goal=goal,
-            length=length
+            length=length,
+            region=region
         )
 
         # Return response

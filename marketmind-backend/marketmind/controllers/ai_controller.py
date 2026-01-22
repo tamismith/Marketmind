@@ -1,4 +1,6 @@
 from ..services.ai_service import generate_marketing_text
+
+
 def generate_caption(
     business_name: str,
     industry: str,
@@ -7,8 +9,14 @@ def generate_caption(
     platform: str,
     description: str,
     goal: str = "",
+    region:str="",
     length: str = "short"
 ) -> str:
+    """
+    Controller for AI caption generation.
+    Coordinates data between route and service.
+    """
+
     return generate_marketing_text(
         business_name=business_name,
         industry=industry,
@@ -17,7 +25,6 @@ def generate_caption(
         platform=platform,
         description=description,
         goal=goal,
-        length=length
+        length=length,
+        region=region
     )
-
-    return caption

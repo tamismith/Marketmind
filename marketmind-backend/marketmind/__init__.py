@@ -1,6 +1,6 @@
 from flask import Flask
 from flask_cors import CORS
-from .config.settings import load_config
+from .config.setting import load_config
 from .routes.ai_routes import ai_blueprint
 
 def create_app():
