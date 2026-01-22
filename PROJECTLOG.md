@@ -79,4 +79,29 @@ Working on the interim report corrections helped me better understand how to pre
 - Begin backend development using Flask   
 - Start implementing basic backend functionality  
 
+## Week 5 [19/01/26 – 24/01/26]
 
+### Summary of Work
+This week, I focused on extending the backend AI functionality by improving the existing AI marketing caption generator. I expanded the AI prompt to produce more detailed, platform-specific, and culturally appropriate outputs, and updated the backend to support additional input parameters such as region. I also tested the updated endpoint using Postman to ensure the changes worked correctly and did not break existing functionality.
+
+---
+
+### Progress Made
+- Enhanced the AI prompt to improve structure, tone control, and output consistency  
+- Added regional and cultural adaptation support to the caption generator  
+- Updated backend routes, controllers, and services to pass new input parameters safely  
+- Debugged and resolved server-side errors related to parameter handling  
+- Re-tested the caption endpoint using Postman to confirm end-to-end functionality  
+
+---
+
+### Reflection
+This week reinforced the importance of maintaining consistency across backend layers when extending functionality. Debugging issues caused by parameter mismatches highlighted how small changes can impact system stability. Improving the AI prompt also demonstrated how prompt design plays a key role in producing high-quality and relevant outputs.
+
+---
+
+### Next Steps
+- Implement an additional AI-powered content generation feature (e.g. ad copy)  
+- Reuse the existing backend architecture to support the new AI endpoint  
+- Test and compare outputs between different AI content types  
+- Commit and document the new AI feature as a separate backend milestone  
