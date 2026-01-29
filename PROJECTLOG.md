@@ -105,3 +105,27 @@ This week reinforced the importance of maintaining consistency across backend la
 - Reuse the existing backend architecture to support the new AI endpoint  
 - Test and compare outputs between different AI content types  
 - Commit and document the new AI feature as a separate backend milestone  
+
+## Week 6 [26/01/26 – 30/01/26]
+
+### Summary of Work
+This week, I focused on extending the backend AI functionality of MarketMind. Building on the existing AI caption generator, I implemented an additional AI-powered ad copy generation feature to support more direct, conversion-focused marketing content for small businesses.
+
+I also integrated AI image generation for ad content, allowing the backend to return both marketing text and a corresponding visual. This required prompt engineering to improve image quality and ensure outputs were appropriate for social media advertising. All AI endpoints were tested using Postman to verify correct request handling and responses.
+
+### Progress Made
+- Implemented a new AI ad copy generation endpoint  
+- Extended the backend to support multiple AI content types  
+- Integrated AI image generation for marketing advertisements  
+- Refined AI prompts to improve ad relevance and quality  
+- Tested all AI endpoints using Postman  
+- Improved error handling and API response structure  
+
+### Reflection
+This week helped reinforce the importance of designing a modular and extensible backend architecture. By reusing the existing routes, controllers, and services structure, I was able to add new AI functionality without restructuring the project. Working with AI image generation also highlighted the need for careful prompt design and awareness of API limitations. Overall, this work strengthened the core functionality of the system before introducing database storage.
+
+### Next Steps
+- Refine AI output quality and consistency  
+- Begin integrating a database to store generated campaigns and content  
+- Implement basic user authentication  
+- Prepare the backend for future frontend integration  
