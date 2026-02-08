@@ -129,3 +129,34 @@ This week helped reinforce the importance of designing a modular and extensible 
 - Begin integrating a database to store generated campaigns and content  
 - Implement basic user authentication  
 - Prepare the backend for future frontend integration  
+
+## Week 7 — (02/02/26-08/02/26)
+
+### Summary of Work  
+This week focused on consolidating the backend foundations of the MarketMind platform and defining a clear development roadmap to support a more robust and credible system. Alongside this, I implemented the core database structure required for future persistence, ensuring the platform is technically prepared for authentication, analytics, and evaluation features.
+
+Work this week was also guided by preparation for interview and viva demonstration, with an emphasis on architectural decisions and system design rather than simple API usage.
+
+---
+
+### Progress Made  
+- Implemented and verified the database infrastructure using Flask, PostgreSQL, SQLAlchemy, and Flask-Migrate.  
+- Created and applied initial database tables using SQLAlchemy models and migrations, confirming that schema changes can be safely managed and evolved over time.  
+- Validated end-to-end backend plumbing, including app factory configuration, environment-based configuration loading, and model registration for migration detection.  
+- Explored and refined a development roadmap aimed at evolving the system into a full platform, prioritising authentication, persistence, and evaluation layers.  
+- Planned enhancements to improve AI output reliability and user confidence during demonstrations, including content/tone evaluation and analytics.
+
+---
+
+### Reflection  
+Implementing actual database tables helped solidify the system’s backend architecture and clarified how future features will integrate with persistent storage. Establishing the database layer early reduces technical risk later in the project and provides a strong foundation for user accounts, historical data, and analytics.
+
+Additionally, focusing on roadmap planning improved my confidence in explaining the project’s technical direction during interviews, allowing me to present MarketMind as a scalable platform rather than a simple AI generation tool.
+
+---
+
+### Next Steps  
+- Implement basic user authentication to enable accounts and user-specific persistence.  
+- Store AI-generated outputs in the database to support history and evaluation.  
+- Introduce a lightweight content/tone evaluation layer to assess generated content.  
+- Develop simple analytics and visualisations to support interview and demo scenarios.
