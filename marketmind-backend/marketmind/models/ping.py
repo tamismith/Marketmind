@@ -1,5 +1,6 @@
 from datetime import datetime
 from marketmind.extensions import db
+# place holder data table
 
 class Ping(db.Model):
 

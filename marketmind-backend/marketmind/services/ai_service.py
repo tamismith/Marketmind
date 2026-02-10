@@ -172,39 +172,32 @@ Return only the ad copy text.
 
     image_prompt: str = f"""
 
+
 Professional social media advertisement image for a small business.
 
-Scene:
-A modern, welcoming {industry.lower()} environment.
-The main product or service is clearly visible in the foreground.
+Scene & Environment:
+A thoughtfully designed {industry.lower()} space that feels real and in use, not staged. Subtle details suggest everyday business activity—natural textures, imperfect symmetry, and a warm, lived-in atmosphere. The main product or service sits naturally in the foreground, integrated into the environment rather than posed.
 
 Composition:
-Clean, uncluttered composition.
-Subject centered and well framed.
-Background softly blurred to keep focus on the product or service.
+Editorial-style composition with intentional negative space. The subject is the clear focal point without feeling overly centered—balanced using the rule of thirds. The scene feels casually composed, like a quiet moment captured during the day.
 
-Lighting:
-Bright natural lighting.
-Warm, inviting tones.
-Friendly and approachable mood.
+Depth & Focus:
+Shallow depth of field with a softly blurred background that hints at the surrounding environment without distracting from the subject. Foreground details are crisp and tactile.
+
+Lighting & Mood:
+Soft natural daylight from a nearby window. Gentle highlights and realistic shadows. Warm, neutral tones that feel inviting and authentic rather than overly saturated.
 
 Business context:
 {description}
 
 Target audience:
-Designed to appeal to {target_audience}.
-Feels relatable and realistic, not staged.
+Designed to resonate with {target_audience}. The scene feels relatable and familiar—credible, understated, and not overtly staged.
 
 Style:
-High-quality commercial photography.
-Instagram-ready aesthetic.
-Modern, professional, and polished.
+High-end lifestyle commercial photography. Instagram-ready but understated. Modern, polished, and intentional with a crafted-but-candid feel.
 
 Constraints:
-No text.
-No logos.
-No watermarks.
-No visible writing.
+No text. No logos. No watermarks. No visible writing or signage.
 """
 
 
