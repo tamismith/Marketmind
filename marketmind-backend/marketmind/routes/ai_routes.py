@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..controllers.ai_controller import generate_caption, generate_ad_copy
 
+
 # Create AI Blueprint
 ai_blueprint = Blueprint("ai", __name__)
 
@@ -78,7 +79,7 @@ def caption_endpoint():
         region = (data.get("region") or "UK").strip()
 
         #  Call controller (controller calls AI service)
-        caption = generate_caption(
+        result = generate_caption(
             business_name=business_name,
             industry=industry,
             target_audience=target_audience,
@@ -92,14 +93,21 @@ def caption_endpoint():
 
         # Return response
         return jsonify({
-            "caption": caption,
-            "meta": {
-                "platform": platform,
-                "tone": tone,
-                "length": length
-            }
-        }), 200
+        "caption": result["content"],
+        "evaluation": result["evaluation"],
+        "meta": {
+            "platform": platform,
+            "tone": tone,
+            "length": length,
+            "region": region
+        }
+    }), 200
 
+    except ValueError as e:
+        return jsonify({
+            "error": "Generation error",
+            "message": str(e)
+        }), 400
     except Exception:
         return jsonify({
             "error": "Server error",
@@ -154,16 +162,22 @@ def ad_copy_endpoint():
         )
 
         return jsonify({
-            "ad_copy": result["ad_copy"],
-            "image_base64": result["image_base64"],
-            "meta": {
-                "platform": platform,
-                "tone": tone,
-                "length": length,
-                "region": region
-            }
-        }), 200
+        "ad_copy": result["ad_copy"],
+        "image_base64": result["image_base64"],
+        "evaluation": result["evaluation"],
+        "meta": {
+            "platform": platform,
+            "tone": tone,
+            "length": length,
+            "region": region
+        }
+    }), 200
 
+    except ValueError as e:
+        return jsonify({
+            "error": "Generation error",
+            "message": str(e)
+        }), 400
     except Exception as e:
         print("ERROR:", e)
         return jsonify({

@@ -9,6 +9,8 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    generated_contents = db.relationship("GeneratedContent", backref="user", lazy=True)
+
 
     def set_password(self, password: str) -> None:
         self.password_hash = generate_password_hash(password)
