@@ -22,14 +22,27 @@ export default function App() {
   const [imageBase64, setImageBase64] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [captionEval, setCaptionEval] = useState(null);
+  const [adEval, setAdEval] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("access_token") || "");
 
   const update = (key, value) => setForm((p) => ({ ...p, [key]: value }));
 
+  async function safeJson(res) {
+    const text = await res.text();
+    try {
+      return text ? JSON.parse(text) : {};
+    } catch {
+      return { message: text || "Non-JSON response" };
+    }
+  }
+  
+  
   async function checkHealth() {
     setError("");
     try {
       const res = await fetch("/api/ai/health");
-      const data = await res.json();
+      const data = await safeJson(res);
       setHealth(data.status || "ok");
     } catch (e) {
       setHealth(null);
@@ -41,6 +54,7 @@ export default function App() {
     setLoading(true);
     setError("");
     setCaption("");
+    setCaptionEval(null);
     try {
       const payload = {
         business_name: form.business_name,
@@ -54,20 +68,47 @@ export default function App() {
         region: form.region,
       };
 
+      // Basic frontend validation
+if (
+  !form.business_name.trim() ||
+  !form.industry.trim() ||
+  !form.target_audience.trim() ||
+  !form.tone.trim() ||
+  !form.platform.trim() ||
+  !form.description.trim()
+) {
+  setError("Please fill in all required fields.");
+  setLoading(false);
+  return;
+}
+
+
       const res = await fetch("/api/ai/caption", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await safeJson(res);
+      console.log("CAPTION STATUS:", res.status);
+      console.log("CAPTION DATA:", data);
       if (!res.ok) throw new Error(data?.message || "Caption request failed");
       setCaption(data.caption || "");
+      setCaptionEval(data.evaluation || null);
+
+      
+
     } catch (e) {
       setError(e.message);
+      setCaption("");
+      setCaptionEval(null);
     } finally {
       setLoading(false);
     }
+    
   }
 
   async function generateAd() {
@@ -75,6 +116,7 @@ export default function App() {
     setError("");
     setAdCopy("");
     setImageBase64("");
+    setAdEval(null);
     try {
       const payload = {
         business_name: form.business_name,
@@ -96,13 +138,26 @@ export default function App() {
         body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Ad request failed");
+      const data = await safeJson(res);
+      if (!res.ok) {
+        throw new Error(
+          data?.message ||
+          data?.error ||
+          "Something went wrong while generating the caption."
+        );
+      }
+      
+      
 
       setAdCopy(data.ad_copy || "");
       setImageBase64(data.image_base64 || "");
+      setAdEval(data.evaluation || null);
+     
     } catch (e) {
       setError(e.message);
+      setAdCopy("");
+      setImageBase64("");
+      setAdEval(null);
     } finally {
       setLoading(false);
     }
@@ -111,7 +166,7 @@ export default function App() {
   return (
     <div style={{ fontFamily: "system-ui", maxWidth: 900, margin: "40px auto", padding: 20 }}>
       <h1 style={{ marginBottom: 4 }}>MarketMind Demo</h1>
-      <p style={{ marginTop: 0, opacity: 0.7 }}>Minimal frontend for interview demonstration</p>
+      
 
       <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 20 }}>
         <button onClick={checkHealth}>Check API Health</button>
@@ -123,11 +178,42 @@ export default function App() {
         </span>
       </div>
 
+
+
       {error && (
         <div style={{ background: "#ffe5e5", border: "1px solid #ffb3b3", padding: 12, marginBottom: 20 }}>
           <b>Error:</b> {error}
         </div>
       )}
+
+{/* <div style={{ border: "1px solid #eee", borderRadius: 10, padding: 14, marginBottom: 20 }}>
+  <h3 style={{ marginTop: 0 }}>JWT Token</h3>
+  <p style={{ marginTop: 0, opacity: 0.7 }}>
+    Paste your access token here after logging in (Postman). This enables protected routes.
+  </p>
+
+  <textarea
+    value={token}
+    onChange={(e) => {
+      setToken(e.target.value);
+      localStorage.setItem("access_token", e.target.value);
+    }}
+    rows={2}
+    placeholder="Paste token here (NOT 'Bearer ...', just the token)"
+    style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #ddd" }}
+  />
+
+  <button
+    style={{ marginTop: 10 }}
+    onClick={() => {
+      setToken("");
+      localStorage.removeItem("access_token");
+    }}
+  >
+    Clear token
+  </button>
+</div> */}
+
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         {[
@@ -194,9 +280,26 @@ export default function App() {
           <div style={{ whiteSpace: "pre-wrap", minHeight: 80 }}>{caption || "—"}</div>
         </div>
 
+        {captionEval && (
+        <div style={{ marginTop: 10, padding: 10, border: "1px solid #eee", borderRadius: 10 }}>
+          <b>Evaluation</b>
+          <div>Tone: {captionEval.tone}</div>
+          <div>Score: {Number(captionEval.score).toFixed(2)}</div>
+        </div>
+      )}
+
+
         <div style={{ border: "1px solid #eee", borderRadius: 10, padding: 14 }}>
           <h3 style={{ marginTop: 0 }}>Ad Copy Output</h3>
           <div style={{ whiteSpace: "pre-wrap", minHeight: 80 }}>{adCopy || "—"}</div>
+          {adEval && (
+            <div style={{ marginTop: 10, padding: 10, border: "1px solid #eee", borderRadius: 10 }}>
+              <b>Evaluation</b>
+              <div>Tone: {adEval.tone}</div>
+              <div>Score: {Number(adEval.score).toFixed(2)}</div>
+            </div>
+          )}
+
 
           {imageBase64 ? (
             <div style={{ marginTop: 12 }}>
