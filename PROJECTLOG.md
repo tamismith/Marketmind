@@ -160,3 +160,66 @@ Additionally, focusing on roadmap planning improved my confidence in explaining 
 - Store AI-generated outputs in the database to support history and evaluation.  
 - Introduce a lightweight content/tone evaluation layer to assess generated content.  
 - Develop simple analytics and visualisations to support interview and demo scenarios.
+ ## Week 8 — (09/02/26–15/02/26)
+
+### Summary of Work  
+This week focused on strengthening the core backend generation pipeline and improving overall system robustness. The aim was to move MarketMind beyond simple AI output generation and toward a structured, reliable, and extensible architecture capable of supporting evaluation and adaptive features.
+
+Particular attention was given to integrating persistent storage for generated content and refining the evaluation service to ensure consistent and safe behaviour under edge cases.
+
+---
+
+### Progress Made  
+
+- Implemented and migrated the `GeneratedContent` model to support persistent storage of:
+  - Prompt input  
+  - Generated output  
+  - Timestamps  
+  - Evaluation-related fields (tone label and sentiment score)
+
+- Established a complete generation → evaluation → storage workflow:
+  1. AI generates content.
+  2. Evaluation service processes the output.
+  3. Tone classification and score are attached.
+  4. Record is saved to the database.
+
+- Refined the evaluation service to improve reliability:
+  - Added validation checks for empty or malformed input.
+  - Implemented a safe fallback mechanism to prevent system crashes.
+  - Standardised tone output to strictly:
+    - `positive`
+    - `neutral`
+    - `negative`
+  - Defined a neutral sentiment threshold between `-0.05` and `0.05` to ensure consistent classification.
+
+- Improved backend structure through clearer separation of concerns:
+  - Routes handle request logic.
+  - Controllers manage orchestration.
+  - Services handle AI generation and evaluation logic.
+  - Models manage persistence.
+
+- Confirmed that database migrations detect model changes correctly and that records are successfully written and retrieved.
+
+---
+
+### Reflection  
+
+This week significantly improved system stability and architectural clarity. Introducing strict evaluation rules and safe fallback handling ensures the platform behaves predictably during demonstrations and prevents runtime failures caused by unexpected AI outputs.
+
+Persisting generated content lays the groundwork for analytics, historical tracking, and future adaptive features such as brand voice learning and feedback-based optimisation.
+
+The project is now transitioning from a proof-of-concept AI tool to a structured backend platform with measurable output evaluation.
+
+---
+
+### Next Steps  
+
+- Develop a basic frontend interface (React) with minimal styling and no advanced functionality, focused on:
+  - Displaying generation input/output.
+  - Showing tone classification results.
+  - Preparing layout structure for future interaction.
+
+- Design and begin implementation of a text-based feedback loop mechanism to:
+  - Capture user preference or rating of generated outputs.
+  - Store feedback in the database.
+  - Prepare the foundation for adaptive brand voice learning.
