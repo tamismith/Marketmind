@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from ..controllers.ai_controller import generate_caption, generate_ad_copy
+from flask_jwt_extended import jwt_required
 
 
 # Create AI Blueprint
@@ -17,6 +18,7 @@ REQUIRED_FIELDS = [
 
 
 @ai_blueprint.route("/caption", methods=["POST"])
+@jwt_required()
 def caption_endpoint():
     """
     POST /api/ai/caption

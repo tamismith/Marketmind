@@ -1,15 +1,162 @@
-import os
-import requests
-from dotenv import load_dotenv
-from openai import OpenAI
+from .ai_provider import (
+    AIProvider,
+    AIProviderError,
+    ImageGenerationRequest,
+    TextGenerationRequest,
+)
+import hashlib
 
 
+ai_provider = AIProvider()
 
-load_dotenv()
 
-# Create OpenAI client
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
+TEXT_STYLE_PRESETS = {
+    "instagram": "vivid, sensory, upbeat, community-first",
+    "facebook": "warm, relatable, trust-building, practical",
+    "linkedin": "professional, confident, value-focused, concise",
+    "twitter/x": "punchy, sharp, memorable, high energy",
+}
+
+PLATFORM_RULES = {
+    "instagram": """
+- Write with lifestyle energy and visual language.
+- Keep it emotionally expressive and friendly.
+- You may use at most 1 emoji if it feels natural.
+- Keep sentence flow conversational and human.
+- Structure: Hook sentence -> sensory/detail sentence -> light CTA.
+""",
+    "linkedin": """
+- Write with professional clarity and business relevance.
+- Focus on credibility, outcomes, and practical value.
+- Do not use emojis.
+- Keep tone polished and concise, suitable for a business audience.
+- Structure: professional insight -> value/outcome statement -> business CTA.
+""",
+    "facebook": """
+- Write in a warm, community-driven voice.
+- Keep it practical and relatable for everyday readers.
+- Emojis are optional but minimal.
+""",
+    "twitter/x": """
+- Keep copy punchy and high-impact.
+- Prioritize brevity and strong phrasing.
+- No emojis unless explicitly requested.
+""",
+}
+
+REGION_RULES = {
+    "uk": """
+- Use UK English spelling (e.g., organise, personalised, favourite).
+- Keep references locally natural for UK audiences; avoid US-first phrasing.
+- CTA tone should feel polite and understated.
+""",
+    "united kingdom": """
+- Use UK English spelling (e.g., organise, personalised, favourite).
+- Keep references locally natural for UK audiences; avoid US-first phrasing.
+- CTA tone should feel polite and understated.
+""",
+    "us": """
+- Use US English spelling (e.g., organize, personalized, favorite).
+- Keep messaging direct and benefit-forward.
+- CTA tone can be confident and action-oriented.
+""",
+    "usa": """
+- Use US English spelling (e.g., organize, personalized, favorite).
+- Keep messaging direct and benefit-forward.
+- CTA tone can be confident and action-oriented.
+""",
+    "united states": """
+- Use US English spelling (e.g., organize, personalized, favorite).
+- Keep messaging direct and benefit-forward.
+- CTA tone can be confident and action-oriented.
+""",
+    "canada": """
+- Use Canadian English spelling and neutral North American phrasing.
+- Keep tone warm, practical, and community-aware.
+- Avoid niche US-only references.
+""",
+    "australia": """
+- Use Australian English spelling and natural local phrasing.
+- Keep the tone straightforward, conversational, and down-to-earth.
+- Avoid US-only idioms and references.
+""",
+    "india": """
+- Use clear international English with India-appropriate phrasing.
+- Keep examples culturally broad and locally relatable.
+- Avoid regionally inaccurate assumptions or stereotypes.
+""",
+}
+
+IMAGE_STYLE_PRESETS = [
+    "Editorial lifestyle photo with cinematic framing and soft film grain.",
+    "Modern commercial campaign shot with bold composition and rich contrast.",
+    "Minimalist premium product scene with clean geometry and intentional negative space.",
+    "Human-centered candid brand moment with natural motion and authentic imperfection.",
+]
+
+
+def _choose_image_style_seed(*parts: str) -> str:
+    seed = "|".join(parts).encode("utf-8")
+    index = int(hashlib.md5(seed).hexdigest(), 16) % len(IMAGE_STYLE_PRESETS)
+    return IMAGE_STYLE_PRESETS[index]
+
+
+def _platform_rule_block(platform_key: str) -> str:
+    return PLATFORM_RULES.get(
+        platform_key,
+        """
+- Match tone and style to the selected platform.
+- Keep wording clear and natural.
+""",
+    )
+
+
+def _platform_output_shape(platform_key: str) -> str:
+    if platform_key == "instagram":
+        return """
+- Sentence 1: bold lifestyle hook.
+- Sentence 2: concrete sensory scene/detail tied to audience benefit.
+- Sentence 3 (or end of sentence 2 for short mode): soft CTA.
+"""
+    if platform_key == "linkedin":
+        return """
+- Sentence 1: professional market/customer insight.
+- Sentence 2: clear value proposition or business outcome.
+- Sentence 3 (or end of sentence 2 for short mode): clear business CTA.
+"""
+    return """
+- Keep a clear beginning, middle (value), and end CTA.
+"""
+
+
+def _region_rule_block(region: str) -> str:
+    region_key = region.strip().lower()
+    return REGION_RULES.get(
+        region_key,
+        """
+- Match spelling and phrasing to the specified region.
+- Keep cultural references neutral unless clearly relevant.
+- Avoid assumptions that conflict with local context.
+""",
+    )
+
+
+def _region_visual_cues(region: str) -> str:
+    region_key = region.strip().lower()
+    cues = {
+        "uk": "subtle UK urban streetscape cues, soft overcast natural light, everyday high-street realism",
+        "united kingdom": "subtle UK urban streetscape cues, soft overcast natural light, everyday high-street realism",
+        "us": "clean North American storefront context, brighter directional daylight, modern lifestyle composition",
+        "usa": "clean North American storefront context, brighter directional daylight, modern lifestyle composition",
+        "united states": "clean North American storefront context, brighter directional daylight, modern lifestyle composition",
+        "canada": "community-centered neighborhood context, natural seasonal realism, balanced warm-cool tones",
+        "australia": "sunlit outdoor-friendly context, airy composition, natural vibrant but realistic color grade",
+        "india": "locally relatable urban context, rich but controlled colors, authentic everyday environment",
+    }
+    return cues.get(
+        region_key,
+        "local context should feel authentic to the specified region with realistic environmental cues",
+    )
 
 def generate_marketing_text(
     business_name: str,
@@ -23,81 +170,67 @@ def generate_marketing_text(
     length: str = "short",
 ) -> str:
     length_instruction = {
-        "short": "1–2 sentences",
-        "medium": "3–4 sentences"
-    }.get(length.lower(), "1–2 sentences")
+        "short": "1-2 sentences",
+        "medium": "3-4 sentences"
+    }.get(length.lower(), "1-2 sentences")
+    platform_key = platform.strip().lower()
+    platform_style = TEXT_STYLE_PRESETS.get(platform_key, "clear, modern, audience-aware, creative")
+    platform_rules = _platform_rule_block(platform_key)
+    platform_shape = _platform_output_shape(platform_key)
+    region_rules = _region_rule_block(region)
 
     prompt = f"""
-You are a highly skilled AI marketing assistant specialising in small and medium-sized businesses (SMEs).
-You understand how to create engaging, practical, and platform-appropriate marketing content that helps
-businesses connect with their audience without sounding corporate or overly technical.
+You are a senior creative strategist for SME marketing campaigns.
 
-TASK:
-Write a {length_instruction} marketing caption specifically for {platform}.
+Write one platform-ready caption for {platform} with a distinct voice.
 
-BUSINESS CONTEXT:
-- Business name: {business_name}
+Context:
+- Business: {business_name}
 - Industry: {industry}
-- Description: {description}
-- Target audience: {target_audience}
-- Primary marketing goal: {goal if goal else "Increase engagement"}
-- Desired tone: {tone}
-- Target region or market: {region}
+- Offer summary: {description}
+- Audience: {target_audience}
+- Goal: {goal if goal else "Increase engagement"}
+- Tone: {tone}
+- Region: {region}
+- Length: {length_instruction}
 
-CONTENT GUIDELINES:
-- Use clear, simple language that is easy to understand.
-- Avoid technical jargon or complex marketing terms.
-- Write in a friendly, human, and natural style.
-- Make it suitable for a small business rather than a large corporation.
+Creative direction:
+- Style profile: {platform_style}
+- Use one vivid image, detail, or scene to make the copy feel concrete.
+- Emphasize one clear benefit for the audience.
+- End with a subtle but actionable call to action.
 
-REGIONAL & CULTURAL ADAPTATION:
-- Tailor spelling and phrasing to suit the target region.
-- Avoid slang or references that would feel unfamiliar or inappropriate.
+Platform-specific execution:
+{platform_rules}
 
-PLATFORM-SPECIFIC RULES:
-- Adapt the writing style to suit {platform}.
-- Instagram/Facebook: conversational; emojis sparingly if appropriate.
-- LinkedIn: professional and approachable; avoid emojis unless appropriate.
-- Twitter/X: concise and impactful.
+Regional adaptation:
+{region_rules}
 
-STRUCTURE REQUIREMENTS:
-- Start with an attention-grabbing line.
-- Highlight the main value or benefit.
-- End with a subtle call-to-action.
+Output shape:
+{platform_shape}
 
-STYLE CONSTRAINTS:
-- Do not use excessive punctuation or emojis.
-- Do not use dashes (-) as punctuation.
-- Avoid unrealistic claims.
-- Avoid hashtags unless explicitly requested.
+Quality guardrails:
+- Plain, natural language.
+- Region-appropriate spelling and phrasing.
+- No exaggerated claims.
+- No hashtags unless explicitly requested.
 - Do not mention AI.
+- Avoid repetitive sentence rhythm.
 
-OUTPUT FORMAT:
-Return only the final caption text.
+Output:
+Return only the final caption text. No labels, bullets, or quotes.
 """
 
     try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You help small businesses create marketing content."},
-                {"role": "user", "content": prompt}
-            ],
+        request = TextGenerationRequest(
+            system_prompt="You help small businesses create marketing content.",
+            user_prompt=prompt,
             max_tokens=150,
-            temperature=0.7
+            temperature=0.7,
         )
-        return response.choices[0].message.content.strip()
-
-
-    except Exception:
+        return ai_provider.generate_text(request)
+    except AIProviderError:
         return "Unable to generate content at this time."
-
-    
-
-
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-STABILITY_API_KEY = os.getenv("STABILITY_API_KEY")
 
 
 def generate_ad_text(
@@ -122,15 +255,20 @@ def generate_ad_text(
     # 1. Generate ad copy text
     # -------------------------
     length_instruction = {
-        "short": "1–2 sentences",
-        "medium": "3–4 sentences"
-    }.get(length.lower(), "1–2 sentences")
+        "short": "1-2 sentences",
+        "medium": "3-4 sentences"
+    }.get(length.lower(), "1-2 sentences")
+    platform_key = platform.strip().lower()
+    platform_style = TEXT_STYLE_PRESETS.get(platform_key, "direct, energetic, conversion-focused")
+    platform_rules = _platform_rule_block(platform_key)
+    platform_shape = _platform_output_shape(platform_key)
+    region_rules = _region_rule_block(region)
 
     text_prompt = f"""
 You are an expert performance marketing copywriter for small businesses.
 
 Write {length_instruction} ad copy for {platform}.
-The copy should be direct, benefit-led, and focused on encouraging action.
+The copy should be benefit-led, specific, and conversion-focused.
 
 Business name: {business_name}
 Industry: {industry}
@@ -141,92 +279,78 @@ Region: {region}
 Goal: {goal if goal else "Increase conversions"}
 Offer: {offer if offer else "None"}
 Call to action: {cta if cta else "Use a natural call to action"}
+Style profile: {platform_style}
 
 Rules:
 - Clear and simple language
 - No exaggerated claims
 - No hashtags
-- No dashes (-) as punctuation
 - Do not mention AI
+- Include one concrete detail that makes the ad feel real, not generic
+- End with one strong action line
+Platform-specific execution:
+{platform_rules}
+Regional adaptation:
+{region_rules}
+Output shape:
+{platform_shape}
 
 Return only the ad copy text.
 """
 
     try:
-        text_response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": "You write effective ad copy for small businesses."},
-                {"role": "user", "content": text_prompt}
-            ],
+        text_request = TextGenerationRequest(
+            system_prompt="You write effective ad copy for small businesses.",
+            user_prompt=text_prompt,
             max_tokens=180,
-            temperature=0.7
+            temperature=0.7,
         )
-        ad_copy = text_response.choices[0].message.content.strip()
-    except Exception as e:
+        ad_copy = ai_provider.generate_text(text_request)
+    except AIProviderError as e:
         print("GPT ERROR:", e)
         ad_copy = "Unable to generate ad copy at this time."
 
     
     image_base64 = ""
 
+    selected_image_style = _choose_image_style_seed(
+        business_name, industry, platform, target_audience, tone
+    )
+    regional_visual_cues = _region_visual_cues(region)
     image_prompt: str = f"""
+Creative social media campaign image for a small business.
 
+Brand context:
+- Business: {business_name}
+- Industry: {industry}
+- Offer summary: {description}
+- Audience: {target_audience}
+- Tone: {tone}
+- Region: {region}
 
-Professional social media advertisement image for a small business.
+Art direction:
+- {selected_image_style}
+- Make the scene feel story-driven and emotionally resonant.
+- Use a strong focal subject with layered depth.
+- Add tactile details and natural imperfection for realism.
+- Keep visual mood aligned with audience expectations for {platform}.
+- Regional cues: {regional_visual_cues}.
 
-Scene & Environment:
-A thoughtfully designed {industry.lower()} space that feels real and in use, not staged. Subtle details suggest everyday business activity—natural textures, imperfect symmetry, and a warm, lived-in atmosphere. The main product or service sits naturally in the foreground, integrated into the environment rather than posed.
+Lighting and composition:
+- Natural cinematic light, controlled highlights, realistic shadows.
+- Rule-of-thirds composition with clean negative space for social layout.
+- Premium commercial quality, not stock-photo stiffness.
 
-Composition:
-Editorial-style composition with intentional negative space. The subject is the clear focal point without feeling overly centered—balanced using the rule of thirds. The scene feels casually composed, like a quiet moment captured during the day.
-
-Depth & Focus:
-Shallow depth of field with a softly blurred background that hints at the surrounding environment without distracting from the subject. Foreground details are crisp and tactile.
-
-Lighting & Mood:
-Soft natural daylight from a nearby window. Gentle highlights and realistic shadows. Warm, neutral tones that feel inviting and authentic rather than overly saturated.
-
-Business context:
-{description}
-
-Target audience:
-Designed to resonate with {target_audience}. The scene feels relatable and familiar—credible, understated, and not overtly staged.
-
-Style:
-High-end lifestyle commercial photography. Instagram-ready but understated. Modern, polished, and intentional with a crafted-but-candid feel.
-
-Constraints:
-No text. No logos. No watermarks. No visible writing or signage.
+Strict constraints:
+- No text, no letters, no logos, no watermark, no signage.
+- No distorted hands, faces, or anatomy.
 """
 
 
     try:
-        response = requests.post(
-            "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image",
-            headers={
-                "Authorization": f"Bearer {STABILITY_API_KEY}",
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            json={
-                "text_prompts": [{"text": image_prompt}],
-                "cfg_scale": 7,
-                "steps": 30,
-                "samples": 1,
-                "height": 1024,
-                "width": 1024
-            },
-            timeout=60
-        )
-
-        if response.status_code == 200:
-            image_base64 = response.json()["artifacts"][0]["base64"]
-        else:
-            print("STABILITY STATUS:", response.status_code)
-            print("STABILITY ERROR:", response.text)
-
-    except Exception as e:
+        image_request = ImageGenerationRequest(prompt=image_prompt)
+        image_base64 = ai_provider.generate_image_base64(image_request)
+    except AIProviderError as e:
         print("STABILITY IMAGE ERROR:", e)
 
     
@@ -235,5 +359,3 @@ No text. No logos. No watermarks. No visible writing or signage.
         "ad_copy": ad_copy,
         "image_base64": image_base64
     }
-
-

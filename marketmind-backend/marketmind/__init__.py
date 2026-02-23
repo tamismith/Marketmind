@@ -4,6 +4,9 @@ from .config.setting import load_config
 from .routes.ai_routes import ai_blueprint
 from marketmind.extensions import db, migrate, jwt
 from .routes.auth_routes import auth_blueprint
+from flask_jwt_extended import JWTManager
+
+jwt = JWTManager()
 
 def create_app():
     app = Flask(__name__)
