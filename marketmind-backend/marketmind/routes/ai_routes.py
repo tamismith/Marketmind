@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..controllers.ai_controller import generate_caption, generate_ad_copy
 from flask_jwt_extended import jwt_required
+from ..responses import error_response
 
 
 # Create AI Blueprint
@@ -53,18 +54,21 @@ def caption_endpoint():
 
         # Check JSON exists
         if not data:
-            return jsonify({
-                "error": "Invalid request",
-                "message": "Request body must be JSON"
-            }), 400
+            return error_response(
+                "INVALID_REQUEST",
+                "Request body must be JSON",
+                400,
+            )
 
         # Validate required fields
         missing = [field for field in REQUIRED_FIELDS if not data.get(field)]
         if missing:
-            return jsonify({
-                "error": "Missing fields",
-                "missing_fields": missing
-            }), 400
+            return error_response(
+                "MISSING_FIELDS",
+                "Required fields are missing",
+                400,
+                {"missing_fields": missing},
+            )
 
         # Extract required fields
         business_name = data["business_name"].strip()
@@ -106,15 +110,13 @@ def caption_endpoint():
     }), 200
 
     except ValueError as e:
-        return jsonify({
-            "error": "Generation error",
-            "message": str(e)
-        }), 400
+        return error_response("GENERATION_ERROR", str(e), 400)
     except Exception:
-        return jsonify({
-            "error": "Server error",
-            "message": "Something went wrong while generating the caption"
-        }), 500
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while generating the caption",
+            500,
+        )
 
 
 
@@ -125,17 +127,20 @@ def ad_copy_endpoint():
         data = request.get_json(silent=True)
 
         if not data:
-            return jsonify({
-                "error": "Invalid request",
-                "message": "Request body must be JSON"
-            }), 400
+            return error_response(
+                "INVALID_REQUEST",
+                "Request body must be JSON",
+                400,
+            )
 
         missing = [field for field in REQUIRED_FIELDS if not data.get(field)]
         if missing:
-            return jsonify({
-                "error": "Missing fields",
-                "missing_fields": missing
-            }), 400
+            return error_response(
+                "MISSING_FIELDS",
+                "Required fields are missing",
+                400,
+                {"missing_fields": missing},
+            )
 
         business_name = data["business_name"].strip()
         industry = data["industry"].strip()
@@ -177,16 +182,14 @@ def ad_copy_endpoint():
     }), 200
 
     except ValueError as e:
-        return jsonify({
-            "error": "Generation error",
-            "message": str(e)
-        }), 400
+        return error_response("GENERATION_ERROR", str(e), 400)
     except Exception as e:
         print("ERROR:", e)
-        return jsonify({
-            "error": "Server error",
-            "message": "Something went wrong while generating the ad"
-        }), 500
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while generating the ad",
+            500,
+        )
 
 
 @ai_blueprint.route("/health", methods=["GET"])
