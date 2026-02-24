@@ -119,6 +119,7 @@ def caption_endpoint():
 
 
 @ai_blueprint.route("/ad-copy", methods=["POST"])
+@jwt_required()
 def ad_copy_endpoint():
     try:
         data = request.get_json(silent=True)
