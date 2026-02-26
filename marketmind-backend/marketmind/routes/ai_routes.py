@@ -1,5 +1,10 @@
 from flask import Blueprint, request, jsonify
-from ..controllers.ai_controller import generate_caption, generate_ad_copy, generate_text_variants
+from ..controllers.ai_controller import (
+    generate_caption,
+    generate_ad_copy,
+    generate_text_variants,
+    select_text_variant,
+)
 from flask_jwt_extended import jwt_required
 from ..responses import error_response
 
@@ -265,5 +270,47 @@ def generate_text_endpoint():
         return error_response(
             "SERVER_ERROR",
             "Something went wrong while generating text variants",
+            500,
+        )
+
+
+@ai_blueprint.route("/select/text", methods=["POST"])
+@jwt_required()
+def select_text_endpoint():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return error_response(
+                "INVALID_REQUEST",
+                "Request body must be JSON",
+                400,
+            )
+
+        content_id = data.get("content_id")
+        selected_variant = (data.get("selected_variant") or "").strip()
+
+        if content_id is None or not selected_variant:
+            return error_response(
+                "MISSING_FIELDS",
+                "content_id and selected_variant are required",
+                400,
+                {"missing_fields": ["content_id", "selected_variant"]},
+            )
+
+        result = select_text_variant(
+            content_id=int(content_id),
+            selected_variant=selected_variant,
+        )
+
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return error_response("VALIDATION_ERROR", str(e), 400)
+    except LookupError as e:
+        return error_response("NOT_FOUND", str(e), 404)
+    except Exception:
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while selecting text variant",
             500,
         )

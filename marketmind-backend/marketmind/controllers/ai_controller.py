@@ -1,5 +1,6 @@
 from ..services.ai_service import generate_marketing_text, generate_ad_text
 from ..services.evaluation_service import evaluate_text
+from ..services.feedback_service import update_brand_memory_from_selection
 from flask_jwt_extended import get_jwt_identity
 from ..models.generated_content import GeneratedContent
 from marketmind.extensions import db
@@ -185,4 +186,49 @@ Region: {region}
         "variant_b": variant_b,
         "evaluation_a": eval_a,
         "evaluation_b": eval_b,
+    }
+
+
+def _extract_context_from_prompt(prompt: str) -> dict:
+    context: dict = {}
+    for line in prompt.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        key_normalized = key.strip().lower().replace(" ", "_")
+        context[key_normalized] = value.strip()
+    return {
+        "tone": context.get("tone", ""),
+        "platform": context.get("platform", ""),
+        "region": context.get("region", ""),
+    }
+
+
+def select_text_variant(content_id: int, selected_variant: str) -> dict:
+    selected = selected_variant.strip().upper()
+    if selected not in {"A", "B"}:
+        raise ValueError("selected_variant must be 'A' or 'B'")
+
+    user_id = int(get_jwt_identity())
+    content = GeneratedContent.query.filter_by(id=content_id, user_id=user_id).first()
+    if not content:
+        raise LookupError("Content not found for this user")
+
+    selected_text = content.variant_a_text if selected == "A" else content.variant_b_text
+    context = _extract_context_from_prompt(content.original_prompt)
+
+    content.selected_variant = selected
+    memory_result = update_brand_memory_from_selection(
+        user_id=user_id,
+        selected_text=selected_text,
+        context=context,
+    )
+
+    db.session.commit()
+
+    return {
+        "content_id": content.id,
+        "selected_variant": selected,
+        "selected_text": selected_text,
+        "brand_memory": memory_result,
     }
