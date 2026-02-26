@@ -10,6 +10,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     generated_contents = db.relationship("GeneratedContent", backref="user", lazy=True)
+    brand_memory = db.relationship("BrandMemory", backref="user", uselist=False)
 
 
     def set_password(self, password: str) -> None:
