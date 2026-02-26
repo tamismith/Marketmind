@@ -50,6 +50,6 @@ def login():
     if not user or not user.check_password(password):
         return error_response("UNAUTHORIZED", "Invalid credentials", 401)
 
-    access_token = create_access_token(identity=user.id)
+    access_token = create_access_token(identity=str(user.id))
 
     return jsonify({"access_token": access_token}), 200

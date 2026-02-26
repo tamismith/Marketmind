@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from ..controllers.ai_controller import generate_caption, generate_ad_copy
+from ..controllers.ai_controller import generate_caption, generate_ad_copy, generate_text_variants
 from flask_jwt_extended import jwt_required
 from ..responses import error_response
 
@@ -199,3 +199,71 @@ def health_check():
     Simple endpoint to confirm AI routes are running
     """
     return jsonify({"status": "ok"}), 200
+
+
+@ai_blueprint.route("/generate/text", methods=["POST"])
+@jwt_required()
+def generate_text_endpoint():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return error_response(
+                "INVALID_REQUEST",
+                "Request body must be JSON",
+                400,
+            )
+
+        missing = [field for field in REQUIRED_FIELDS if not data.get(field)]
+        if missing:
+            return error_response(
+                "MISSING_FIELDS",
+                "Required fields are missing",
+                400,
+                {"missing_fields": missing},
+            )
+
+        business_name = data["business_name"].strip()
+        industry = data["industry"].strip()
+        target_audience = data["target_audience"].strip()
+        tone = data["tone"].strip()
+        platform = data["platform"].strip()
+        description = data["description"].strip()
+
+        goal = (data.get("goal") or "").strip()
+        length = (data.get("length") or "short").strip()
+        region = (data.get("region") or "UK").strip()
+
+        result = generate_text_variants(
+            business_name=business_name,
+            industry=industry,
+            target_audience=target_audience,
+            tone=tone,
+            platform=platform,
+            description=description,
+            goal=goal,
+            length=length,
+            region=region,
+        )
+
+        return jsonify({
+            "content_id": result["content_id"],
+            "variant_a": result["variant_a"],
+            "variant_b": result["variant_b"],
+            "evaluation_a": result["evaluation_a"],
+            "evaluation_b": result["evaluation_b"],
+            "meta": {
+                "platform": platform,
+                "tone": tone,
+                "length": length,
+                "region": region,
+            },
+        }), 200
+
+    except ValueError as e:
+        return error_response("GENERATION_ERROR", str(e), 400)
+    except Exception:
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while generating text variants",
+            500,
+        )
