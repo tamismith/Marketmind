@@ -223,3 +223,44 @@ The project is now transitioning from a proof-of-concept AI tool to a structured
   - Capture user preference or rating of generated outputs.
   - Store feedback in the database.
   - Prepare the foundation for adaptive brand voice learning.
+
+## Week 9 — (23/02/26–26/02/26)
+
+### Summary of Work  
+This week focused on transitioning MarketMind from a single-output generation flow into a structured A/B feedback system with stronger backend architecture and security consistency. I prioritised modularity, protected routes, schema evolution, and end-to-end validation of generation and selection workflows.
+
+---
+
+### Progress Made  
+- Completed a staged backend refactor and feature rollout with traceable commits:
+  - `refactor(ai)` provider abstraction for OpenAI/Stability and stronger platform/region prompting.
+  - `feat(auth)` JWT enforcement added for ad-copy route to align protected AI endpoints.
+  - `scaffold` feedback/publishing service stubs and standardised API error responses.
+  - `feat(db)` added `BrandMemory` model + migration (one-to-one user memory profile).
+  - `feat(ai)` extended `GeneratedContent` schema for A/B variants (eval JSON, selected state, original prompt).
+  - `feat(ai)` implemented A/B generation endpoint and persisted variant outputs.
+  - `feat(ai)` implemented selection feedback loop with memory persistence updates.
+- Notable implementation outcomes:
+  - Routes/controllers now avoid model SDK-specific logic through provider abstraction.
+  - Error responses are consistent across auth and AI routes using shared helper and JWT callbacks.
+  - Ownership-safe selection logic was validated (cross-user selection blocked; owner selection succeeds).
+  - Migration issue (`can't adapt type 'dict'`) was resolved by serialising JSON payloads during backfill.
+- Key commit evidence (this week):
+  - `c4c92d8f` add A/B generation, selection feedback loop, and brand memory persistence
+  - `bafd6df5` add A/B text generation endpoint and extend `GeneratedContent` schema
+  - `554cca04` add `BrandMemory` model and migration with one-to-one user link
+  - `19d152d7` scaffold feedback/publishing modules and standardise error responses
+  - `983d53f8` require JWT for ad-copy endpoint
+
+---
+
+### Reflection  
+This week highlighted the importance of sequencing architectural work before feature expansion. Implementing abstractions and consistent error handling first made later endpoint development cleaner and easier to debug. Migration issues also reinforced that schema changes must be validated against the real database engine, not only compile checks. Overall, the system now better demonstrates technical depth through modular design, secure multi-user behaviour, and a working feedback loop foundation.
+
+---
+
+### Next Steps  
+- Implement `GET /api/ai/history` with user-scoped records and selected-variant visibility.
+- Implement `GET /api/ai/analytics` with baseline metrics for generation and sentiment distribution.
+- Integrate memory-aware prompt augmentation into generation flow using persisted `BrandMemory`.
+- Expand testing evidence (integration/smoke) for dissertation results and viva preparation.

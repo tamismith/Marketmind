@@ -1,0 +1,20 @@
+# Workspace-level ignores (keep backend/frontend-specific rules in their own .gitignore files)
+
+# IDE/editor
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+
+# Root virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Root environment files
+.env
+.env.*
+!.env.example

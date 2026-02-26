@@ -3,93 +3,59 @@ import { useState } from "react";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ email: "", password: "" });
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    console.log("Login data:", form);
 
     // TEMP fake login
-    console.log("Login data:", form);
     navigate("/app");
   };
 
   return (
-    <div style={styles.wrapper}>
-      <form style={styles.card} onSubmit={handleSubmit}>
+    <div className="page-center">
+      <div className="card">
         <h2>Login</h2>
+        <p>Welcome back — let’s generate something good.</p>
 
-        <input
-          type="email"
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+        <form className="form" onSubmit={handleSubmit}>
+          <input
+            className="input"
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            required
+          />
 
-        <input
-          type="password"
-          name="password"
-          placeholder="Password"
-          onChange={handleChange}
-          required
-          style={styles.input}
-        />
+          <input
+            className="input"
+            type="password"
+            name="password"
+            placeholder="Password"
+            value={form.password}
+            onChange={handleChange}
+            required
+          />
 
-        <button type="submit" style={styles.button}>
-          Login
-        </button>
+          <button className="btn" type="submit">
+            Login
+          </button>
+        </form>
 
-        <p>
-          No account? <Link to="/register">Register</Link>
-        </p>
-      </form>
+        <div className="helper-row">
+          <span>No account?</span>
+          <Link className="link" to="/register">
+            Register
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
-
-const styles = {
- wrapper: {
-        height: "100vh",
-        width: "100vw",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        background: "#0f1117",
-        color: "white",
-      },
-  card: {
-    background: "#1a1d26",
-    padding: 32,
-    borderRadius: 12,
-    width: 350,
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-  },
-  input: {
-    padding: 10,
-    borderRadius: 6,
-    border: "1px solid #333",
-    background: "#111",
-    color: "white",
-  },
-  button: {
-    padding: 12,
-    borderRadius: 6,
-    border: "none",
-    background: "#4f46e5",
-    color: "white",
-    cursor: "pointer",
-  },
-};
