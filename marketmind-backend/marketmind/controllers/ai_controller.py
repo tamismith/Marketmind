@@ -291,6 +291,33 @@ def get_user_analytics() -> dict:
 
     top_tone = max(tone_counts, key=tone_counts.get) if selected_rows else None
 
+    # VAD summary from selected outputs
+    vad_totals = {"valence": 0.0, "arousal": 0.0, "dominance": 0.0}
+    vad_samples = 0
+    for row in selected_rows:
+        vad = (selected_eval(row).get("vad") or {})
+        if not vad:
+            continue
+        vad_totals["valence"] += float(vad.get("valence", 0.0))
+        vad_totals["arousal"] += float(vad.get("arousal", 0.0))
+        vad_totals["dominance"] += float(vad.get("dominance", 0.0))
+        vad_samples += 1
+
+    if vad_samples > 0:
+        vad_summary = {
+            "avg_valence": round(vad_totals["valence"] / vad_samples, 4),
+            "avg_arousal": round(vad_totals["arousal"] / vad_samples, 4),
+            "avg_dominance": round(vad_totals["dominance"] / vad_samples, 4),
+            "sample_size": vad_samples,
+        }
+    else:
+        vad_summary = {
+            "avg_valence": 0.0,
+            "avg_arousal": 0.0,
+            "avg_dominance": 0.0,
+            "sample_size": 0,
+        }
+
     # 2) Weekly Tone Trend (selected tones by ISO week)
     weekly_map = {}
     for row in selected_rows:
@@ -338,6 +365,7 @@ def get_user_analytics() -> dict:
             "tone_counts": tone_counts,
             "selected_samples": len(selected_rows),
         },
+        "vad_summary": vad_summary,
         "weekly_tone_trend": weekly_tone_trend,
         "regional_style_preference": regional_style_preference,
     }
