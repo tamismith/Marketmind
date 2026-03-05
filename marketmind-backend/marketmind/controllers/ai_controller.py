@@ -1,3 +1,5 @@
+from datetime import date
+
 from ..services.ai_service import generate_marketing_text, generate_ad_text
 from ..services.evaluation_service import evaluate_text
 from ..services.feedback_service import update_brand_memory_from_selection
@@ -231,4 +233,111 @@ def select_text_variant(content_id: int, selected_variant: str) -> dict:
         "selected_variant": selected,
         "selected_text": selected_text,
         "brand_memory": memory_result,
+    }
+
+
+def get_user_history(limit: int = 20) -> dict:
+    if limit <= 0:
+        raise ValueError("limit must be greater than 0")
+
+    # Keep default responses lightweight for frontend usage.
+    if limit > 100:
+        limit = 100
+
+    user_id = int(get_jwt_identity())
+    rows = (
+        GeneratedContent.query
+        .filter_by(user_id=user_id)
+        .order_by(GeneratedContent.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    items = []
+    for row in rows:
+        items.append({
+            "content_id": row.id,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+            "selected_variant": row.selected_variant,
+            "original_prompt": row.original_prompt,
+            "variant_a_text": row.variant_a_text,
+            "variant_b_text": row.variant_b_text,
+            "evaluation_a": row.variant_a_eval_json,
+            "evaluation_b": row.variant_b_eval_json,
+        })
+
+    return {
+        "count": len(items),
+        "items": items,
+    }
+
+
+def get_user_analytics() -> dict:
+    user_id = int(get_jwt_identity())
+    rows = GeneratedContent.query.filter_by(user_id=user_id).all()
+
+    selected_rows = [r for r in rows if (r.selected_variant or "").upper() in {"A", "B"}]
+
+    def selected_eval(row: GeneratedContent) -> dict:
+        return row.variant_a_eval_json if row.selected_variant == "A" else row.variant_b_eval_json
+
+    # 1) Best Brand Voice (most common selected tone)
+    tone_counts = {"positive": 0, "neutral": 0, "negative": 0}
+    for row in selected_rows:
+        tone = (selected_eval(row).get("tone") or "neutral").lower()
+        if tone not in tone_counts:
+            tone = "neutral"
+        tone_counts[tone] += 1
+
+    top_tone = max(tone_counts, key=tone_counts.get) if selected_rows else None
+
+    # 2) Weekly Tone Trend (selected tones by ISO week)
+    weekly_map = {}
+    for row in selected_rows:
+        if not row.created_at:
+            continue
+        iso_year, iso_week, _ = row.created_at.isocalendar()
+        week_key = f"{iso_year}-W{iso_week:02d}"
+        week_start = date.fromisocalendar(iso_year, iso_week, 1)
+        week_end = date.fromisocalendar(iso_year, iso_week, 7)
+        week_entry = weekly_map.setdefault(
+            week_key,
+            {
+                "week": week_key,
+                "week_start_date": week_start.isoformat(),
+                "week_end_date": week_end.isoformat(),
+                "positive": 0,
+                "neutral": 0,
+                "negative": 0,
+                "selected_count": 0,
+            },
+        )
+        tone = (selected_eval(row).get("tone") or "neutral").lower()
+        if tone not in {"positive", "neutral", "negative"}:
+            tone = "neutral"
+        week_entry[tone] += 1
+        week_entry["selected_count"] += 1
+
+    weekly_tone_trend = [weekly_map[key] for key in sorted(weekly_map.keys())]
+
+    # 3) Regional Style Preference (region counts from selected records)
+    region_counts = {}
+    for row in selected_rows:
+        context = _extract_context_from_prompt(row.original_prompt)
+        region = (context.get("region") or "Unknown").strip()
+        region_counts[region] = region_counts.get(region, 0) + 1
+
+    regional_style_preference = [
+        {"region": region, "selected_count": count}
+        for region, count in sorted(region_counts.items(), key=lambda item: item[1], reverse=True)
+    ]
+
+    return {
+        "best_brand_voice": {
+            "top_tone": top_tone,
+            "tone_counts": tone_counts,
+            "selected_samples": len(selected_rows),
+        },
+        "weekly_tone_trend": weekly_tone_trend,
+        "regional_style_preference": regional_style_preference,
     }

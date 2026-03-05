@@ -1,9 +1,10 @@
 from flask import Blueprint, request, jsonify
 from ..controllers.ai_controller import (
-    generate_caption,
     generate_ad_copy,
     generate_text_variants,
     select_text_variant,
+    get_user_history,
+    get_user_analytics,
 )
 from flask_jwt_extended import jwt_required
 from ..responses import error_response
@@ -21,108 +22,6 @@ REQUIRED_FIELDS = [
     "platform",
     "description"
 ]
-
-
-@ai_blueprint.route("/caption", methods=["POST"])
-@jwt_required()
-def caption_endpoint():
-    """
-    POST /api/ai/caption
-
-    Expects JSON:
-    {
-      "business_name": "Green Brew Cafe",
-      "industry": "Coffee shop",
-      "target_audience": "Students",
-      "tone": "Friendly",
-      "platform": "Instagram",
-      "description": "Affordable coffee and snacks near campus",
-      "goal": "Increase foot traffic",
-      "length": "short"
-      "region": "UK"
-
-    }
-
-    Returns JSON:
-    {
-      "caption": "Fuel your study sessions with freshly brewed coffee ☕",
-      "meta": {
-        "platform": "Instagram",
-        "tone": "Friendly",
-        "length": "short"
-      }
-    }
-    """
-    try:
-        # Read JSON body
-        data = request.get_json(silent=True)
-
-        # Check JSON exists
-        if not data:
-            return error_response(
-                "INVALID_REQUEST",
-                "Request body must be JSON",
-                400,
-            )
-
-        # Validate required fields
-        missing = [field for field in REQUIRED_FIELDS if not data.get(field)]
-        if missing:
-            return error_response(
-                "MISSING_FIELDS",
-                "Required fields are missing",
-                400,
-                {"missing_fields": missing},
-            )
-
-        # Extract required fields
-        business_name = data["business_name"].strip()
-        industry = data["industry"].strip()
-        target_audience = data["target_audience"].strip()
-        tone = data["tone"].strip()
-        platform = data["platform"].strip()
-        description = data["description"].strip()
-       
-
-        #  Optional fields (safe defaults)
-        goal = (data.get("goal") or "").strip()
-        length = (data.get("length") or "short").strip()
-        region = (data.get("region") or "UK").strip()
-
-        #  Call controller (controller calls AI service)
-        result = generate_caption(
-            business_name=business_name,
-            industry=industry,
-            target_audience=target_audience,
-            tone=tone,
-            platform=platform,
-            description=description,
-            goal=goal,
-            length=length,
-            region=region
-        )
-
-        # Return response
-        return jsonify({
-        "caption": result["content"],
-        "evaluation": result["evaluation"],
-        "meta": {
-            "platform": platform,
-            "tone": tone,
-            "length": length,
-            "region": region
-        }
-    }), 200
-
-    except ValueError as e:
-        return error_response("GENERATION_ERROR", str(e), 400)
-    except Exception:
-        return error_response(
-            "SERVER_ERROR",
-            "Something went wrong while generating the caption",
-            500,
-        )
-
 
 
 @ai_blueprint.route("/ad-copy", methods=["POST"])
@@ -312,5 +211,46 @@ def select_text_endpoint():
         return error_response(
             "SERVER_ERROR",
             "Something went wrong while selecting text variant",
+            500,
+        )
+
+
+@ai_blueprint.route("/history", methods=["GET"])
+@jwt_required()
+def history_endpoint():
+    try:
+        limit_raw = request.args.get("limit", "20")
+        try:
+            limit = int(limit_raw)
+        except ValueError:
+            return error_response(
+                "VALIDATION_ERROR",
+                "limit must be an integer",
+                400,
+            )
+
+        result = get_user_history(limit=limit)
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return error_response("VALIDATION_ERROR", str(e), 400)
+    except Exception:
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while fetching history",
+            500,
+        )
+
+
+@ai_blueprint.route("/analytics", methods=["GET"])
+@jwt_required()
+def analytics_endpoint():
+    try:
+        result = get_user_analytics()
+        return jsonify(result), 200
+    except Exception:
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while fetching analytics",
             500,
         )
