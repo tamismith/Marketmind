@@ -1,20 +1,52 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { api, setToken } from "../api/client";
 
 export default function Register() {
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Register data:", form);
+    setErrorMessage("");
+    setIsSubmitting(true);
 
-    // TEMP fake register
-    navigate("/login");
+    try {
+      await api.post(
+        "/auth/register",
+        {
+          email: form.email,
+          password: form.password,
+        },
+        { auth: false },
+      );
+
+      const loginData = await api.post(
+        "/auth/login",
+        {
+          email: form.email,
+          password: form.password,
+        },
+        { auth: false },
+      );
+      const token = loginData?.access_token;
+      if (!token) {
+        throw new Error("Registered, but could not sign in automatically.");
+      }
+
+      setToken(token);
+      navigate("/app");
+    } catch (error) {
+      setErrorMessage(error.message || "Unable to register right now.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -53,10 +85,14 @@ export default function Register() {
             required
           />
 
-          <button className="btn" type="submit">
-            Create account
+          <button className="btn" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Creating account..." : "Create account"}
           </button>
         </form>
+
+        {errorMessage ? (
+          <p style={{ marginTop: 12, color: "#ffb4b4" }}>{errorMessage}</p>
+        ) : null}
 
         <div className="helper-row">
           <span>Already have an account?</span>

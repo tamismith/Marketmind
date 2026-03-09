@@ -1,4 +1,5 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { clearToken } from "../api/client";
 export default function DashboardLayout() {
   const navigate = useNavigate();
 
@@ -35,6 +36,15 @@ export default function DashboardLayout() {
           >
             History
           </NavLink>
+
+          <NavLink
+            to="/app/analytics"
+            className={({ isActive }) =>
+              isActive ? "navItem navItemActive" : "navItem"
+            }
+          >
+            Analytics
+          </NavLink>
         </nav>
 
         <div style={{ marginTop: "auto" }}>
@@ -43,8 +53,14 @@ export default function DashboardLayout() {
             <span className="pill">38/50 left</span>
           </div>
 
-          <button className="logout" onClick={() => navigate("/login")}>
-            Logout (dummy)
+          <button
+            className="logout"
+            onClick={() => {
+              clearToken();
+              navigate("/login");
+            }}
+          >
+            Logout
           </button>
         </div>
       </aside>

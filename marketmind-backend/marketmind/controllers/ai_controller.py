@@ -123,8 +123,14 @@ def generate_text_variants(
     """
     Generate two distinct text variants, evaluate both, and persist them.
     """
-    angle_a = "Creative angle: emotional storytelling with a vivid scene."
-    angle_b = "Creative angle: practical value and concrete outcome."
+    angle_a = (
+        "Creative brief for Variant A: emotional storytelling. "
+        "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
+    )
+    angle_b = (
+        "Creative brief for Variant B: direct performance style. "
+        "Lead with concrete value, include one specific benefit, and end with a clear action."
+    )
 
     variant_a = generate_marketing_text(
         business_name=business_name,
@@ -148,6 +154,24 @@ def generate_text_variants(
         length=length,
         region=region,
     )
+
+    # If outputs are too close, force a sharper second style split for B.
+    if variant_a.strip().lower() == variant_b.strip().lower():
+        fallback_b = (
+            "Creative brief for Variant B: concise, punchy, and utility-first. "
+            "Use different wording from any storytelling style and focus on one measurable outcome."
+        )
+        variant_b = generate_marketing_text(
+            business_name=business_name,
+            industry=industry,
+            target_audience=target_audience,
+            tone=tone,
+            platform=platform,
+            description=f"{description} {fallback_b}",
+            goal=goal,
+            length=length,
+            region=region,
+        )
 
     if not variant_a or not variant_a.strip():
         raise ValueError("AI returned empty output for variant A")

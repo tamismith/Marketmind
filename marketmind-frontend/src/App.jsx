@@ -6,6 +6,10 @@ import Register from "./pages/Register.jsx";
 import DashboardLayout from "./layouts/DashboardLayout.jsx";
 import DashboardHome from "./pages/DashboardHome.jsx";
 import Generate from "./pages/Generate.jsx";
+import History from "./pages/History.jsx";
+import Analytics from "./pages/Analytics.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import PublicOnlyRoute from "./components/PublicOnlyRoute.jsx";
 
 
 export default function App() {
@@ -13,13 +17,36 @@ export default function App() {
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Home />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route
+        path="/login"
+        element={
+          <PublicOnlyRoute>
+            <Login />
+          </PublicOnlyRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <PublicOnlyRoute>
+            <Register />
+          </PublicOnlyRoute>
+        }
+      />
 
       {/* App routes (nested) */}
-      <Route path="/app" element={<DashboardLayout />}>
+      <Route
+        path="/app"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<DashboardHome />} />
         <Route path="generate" element={<Generate />} />
+        <Route path="history" element={<History />} />
+        <Route path="analytics" element={<Analytics />} />
       </Route>
       
 
