@@ -1,9 +1,30 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from "recharts";
+
+const CHART_COLORS = {
+  positive: "#22c55e",
+  neutral: "#94a3b8",
+  negative: "#ef4444",
+  safe: "#0ea5a3",
+  balanced: "#38bdf8",
+  bold: "#f59e0b",
+  experimental: "#a78bfa",
+};
 
 export default function Analytics() {
-  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -25,16 +46,34 @@ export default function Analytics() {
     loadAnalytics();
   }, []);
 
-  const topTone = data?.best_brand_voice?.top_tone || "Not enough data yet";
-  const selectedSamples = data?.best_brand_voice?.selected_samples ?? 0;
-  const topRegion = data?.regional_style_preference?.[0]?.region || "Not enough data yet";
   const imageUsage = data?.image_creativity_usage;
-  const topImageCreativity = imageUsage?.top_creativity_level || "Not enough data yet";
   const imageCounts = imageUsage?.counts || {};
   const imageSamples = imageUsage?.selected_samples ?? 0;
-  const latestWeek = data?.weekly_tone_trend?.length
-    ? data.weekly_tone_trend[data.weekly_tone_trend.length - 1]
-    : null;
+
+  const weeklyToneData = useMemo(() => {
+    return (data?.weekly_tone_trend || []).map((w) => ({
+      week: w.week_start_date || w.week,
+      positive: w.positive || 0,
+      neutral: w.neutral || 0,
+      negative: w.negative || 0,
+    }));
+  }, [data]);
+
+  const regionData = useMemo(() => {
+    return (data?.regional_style_preference || []).map((r) => ({
+      region: r.region,
+      selected_count: r.selected_count || 0,
+    }));
+  }, [data]);
+
+  const creativityData = useMemo(() => {
+    return [
+      { name: "safe", value: imageCounts.safe || 0 },
+      { name: "balanced", value: imageCounts.balanced || 0 },
+      { name: "bold", value: imageCounts.bold || 0 },
+      { name: "experimental", value: imageCounts.experimental || 0 },
+    ];
+  }, [imageCounts]);
 
   return (
     <div className="pageStack">
@@ -47,70 +86,75 @@ export default function Analytics() {
       {errorMessage ? <p className="statusError">{errorMessage}</p> : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="gridCols3">
-          <div className="sectionCard">
-            <h4 style={{ margin: 0 }}>Preferred Voice</h4>
-            <div className="muted">
-              Your selected content is mostly <strong className="evalTitle">{topTone}</strong>.
+        <div className="sectionCard">
+          <h4 style={{ marginTop: 0 }}>Weekly Tone Trend (Visual)</h4>
+          {weeklyToneData.length > 0 ? (
+            <div style={{ width: "100%", height: 300 }}>
+              <ResponsiveContainer>
+                <BarChart data={weeklyToneData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#24314a" />
+                  <XAxis dataKey="week" stroke="#9fb0cc" />
+                  <YAxis stroke="#9fb0cc" allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="positive" stackId="tone" fill={CHART_COLORS.positive} />
+                  <Bar dataKey="neutral" stackId="tone" fill={CHART_COLORS.neutral} />
+                  <Bar dataKey="negative" stackId="tone" fill={CHART_COLORS.negative} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-
-          <div className="sectionCard">
-            <h4 style={{ margin: 0 }}>Top Region Style</h4>
-            <div className="muted">
-              Most selected regional style: <strong className="evalTitle">{topRegion}</strong>.
-            </div>
-          </div>
-
-          <div className="sectionCard">
-            <h4 style={{ margin: 0 }}>Learning Progress</h4>
-            <div className="muted">
-              Preferences learned from <strong className="evalTitle">{selectedSamples}</strong> selections.
-            </div>
-          </div>
-
-          <div className="sectionCard">
-            <h4 style={{ margin: 0 }}>Most Used Image Creativity</h4>
-            <div className="muted">
-              Most selected image style: <strong className="evalTitle">{topImageCreativity}</strong>.
-            </div>
-            <div className="muted" style={{ marginTop: 6 }}>
-              Safe {imageCounts.safe || 0}, Balanced {imageCounts.balanced || 0}, Bold {imageCounts.bold || 0}, Experimental {imageCounts.experimental || 0}
-            </div>
-            <div className="muted" style={{ marginTop: 6 }}>
-              Based on <strong className="evalTitle">{imageSamples}</strong> saved image selections.
-            </div>
-          </div>
+          ) : (
+            <p className="muted">No weekly tone chart data yet.</p>
+          )}
         </div>
       ) : null}
 
       {!isLoading && !errorMessage ? (
-        <div className="sectionCard">
-          <h4 style={{ margin: 0 }}>Latest Weekly Trend</h4>
-          {latestWeek ? (
-            <div style={{ display: "grid", gap: 6 }} className="muted">
-              <div>
-                Week: <strong className="evalTitle">{latestWeek.week_start_date} to {latestWeek.week_end_date}</strong>
+        <div className="gridCols2">
+          <div className="sectionCard">
+            <h4 style={{ marginTop: 0 }}>Regional Preference (Visual)</h4>
+            {regionData.length > 0 ? (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <BarChart data={regionData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#24314a" />
+                    <XAxis dataKey="region" stroke="#9fb0cc" />
+                    <YAxis stroke="#9fb0cc" allowDecimals={false} />
+                    <Tooltip />
+                    <Bar dataKey="selected_count" fill={CHART_COLORS.safe} />
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-              <div>
-                Tone mix: <strong className="evalTitle">
-                  Positive {latestWeek.positive}, Neutral {latestWeek.neutral}, Negative {latestWeek.negative}
-                </strong>
+            ) : (
+              <p className="muted">No regional chart data yet.</p>
+            )}
+          </div>
+
+          <div className="sectionCard">
+            <h4 style={{ marginTop: 0 }}>Image Creativity Usage (Visual)</h4>
+            {imageSamples > 0 ? (
+              <div style={{ width: "100%", height: 300 }}>
+                <ResponsiveContainer>
+                  <PieChart>
+                    <Tooltip />
+                    <Legend />
+                    <Pie
+                      data={creativityData}
+                      dataKey="value"
+                      nameKey="name"
+                      outerRadius={90}
+                    >
+                      {creativityData.map((entry) => (
+                        <Cell key={entry.name} fill={CHART_COLORS[entry.name]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-          ) : (
-            <div>
-              <p className="muted">No weekly trend yet. Select more variants first.</p>
-              <div className="actionRow" style={{ marginTop: 10 }}>
-                <button className="btn btnInline" onClick={() => navigate("/app/generate")}>
-                  Generate Variants
-                </button>
-                <button className="btnGhost btnInline" onClick={() => navigate("/app/history")}>
-                  Check History
-                </button>
-              </div>
-            </div>
-          )}
+            ) : (
+              <p className="muted">No image creativity chart data yet.</p>
+            )}
+          </div>
         </div>
       ) : null}
     </div>
