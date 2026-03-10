@@ -56,6 +56,7 @@ Region: {region}
     # Store in DB
     content = GeneratedContent(
         user_id=user_id,
+        content_type="text",
         original_prompt=prompt_text.strip(),
         # Temporary compatibility write: Week 3 will generate true A/B variants.
         variant_a_text=caption,
@@ -105,7 +106,38 @@ def generate_ad_copy(
     if not ad_copy or not ad_copy.strip():
         raise ValueError("AI returned empty output")
 
-    result["evaluation"] = evaluate_text(ad_copy)
+    evaluation = evaluate_text(ad_copy)
+    user_id = int(get_jwt_identity())
+
+    prompt_text = f"""
+Business: {business_name}
+Industry: {industry}
+Target Audience: {target_audience}
+Tone: {tone}
+Platform: {platform}
+Description: {description}
+Goal: {goal}
+Length: {length}
+Region: {region}
+Offer: {offer}
+CTA: {cta}
+"""
+
+    content = GeneratedContent(
+        user_id=user_id,
+        content_type="ad_copy",
+        original_prompt=prompt_text.strip(),
+        variant_a_text=ad_copy,
+        variant_b_text="",
+        variant_a_eval_json=evaluation,
+        variant_b_eval_json={},
+        selected_variant=None,
+    )
+    db.session.add(content)
+    db.session.commit()
+
+    result["evaluation"] = evaluation
+    result["content_id"] = content.id
     return result
 
 
@@ -196,6 +228,7 @@ Region: {region}
 
     content = GeneratedContent(
         user_id=user_id,
+        content_type="text",
         original_prompt=prompt_text.strip(),
         variant_a_text=variant_a,
         variant_b_text=variant_b,
@@ -260,6 +293,30 @@ def select_text_variant(content_id: int, selected_variant: str) -> dict:
     }
 
 
+def select_ad_image(content_id: int, image_option_id: str, image_base64: str) -> dict:
+    if not image_option_id.strip():
+        raise ValueError("image_option_id is required")
+    if not image_base64.strip():
+        raise ValueError("image_base64 is required")
+
+    user_id = int(get_jwt_identity())
+    content = GeneratedContent.query.filter_by(id=content_id, user_id=user_id).first()
+    if not content:
+        raise LookupError("Content not found for this user")
+    if content.content_type != "ad_copy":
+        raise ValueError("Image selection can only be saved for ad_copy content")
+
+    content.selected_image_option_id = image_option_id.strip()
+    content.selected_image_base64 = image_base64.strip()
+    db.session.commit()
+
+    return {
+        "content_id": content.id,
+        "selected_image_option_id": content.selected_image_option_id,
+        "saved": True,
+    }
+
+
 def get_user_history(limit: int = 20) -> dict:
     if limit <= 0:
         raise ValueError("limit must be greater than 0")
@@ -277,22 +334,43 @@ def get_user_history(limit: int = 20) -> dict:
         .all()
     )
 
-    items = []
+    text_items = []
+    ad_copy_items = []
     for row in rows:
-        items.append({
+        base_item = {
             "content_id": row.id,
             "created_at": row.created_at.isoformat() if row.created_at else None,
+            "content_type": row.content_type,
             "selected_variant": row.selected_variant,
+            "selected_image_option_id": row.selected_image_option_id,
+            "selected_image_base64": row.selected_image_base64,
+            "selected_text": (
+                row.variant_a_text if row.selected_variant == "A"
+                else row.variant_b_text if row.selected_variant == "B"
+                else None
+            ),
             "original_prompt": row.original_prompt,
             "variant_a_text": row.variant_a_text,
             "variant_b_text": row.variant_b_text,
             "evaluation_a": row.variant_a_eval_json,
             "evaluation_b": row.variant_b_eval_json,
-        })
+        }
+        if row.content_type == "ad_copy":
+            ad_copy_items.append({
+                **base_item,
+                "ad_copy_text": row.variant_a_text,
+                "evaluation": row.variant_a_eval_json,
+            })
+        else:
+            text_items.append(base_item)
 
     return {
-        "count": len(items),
-        "items": items,
+        "count": len(rows),
+        "text_count": len(text_items),
+        "ad_copy_count": len(ad_copy_items),
+        "items": text_items,  # compatibility for existing clients
+        "text_items": text_items,
+        "ad_copy_items": ad_copy_items,
     }
 
 
@@ -383,6 +461,30 @@ def get_user_analytics() -> dict:
         for region, count in sorted(region_counts.items(), key=lambda item: item[1], reverse=True)
     ]
 
+    # 4) Image creativity usage (from saved ad image selections)
+    creativity_counts = {
+        "safe": 0,
+        "balanced": 0,
+        "bold": 0,
+        "experimental": 0,
+    }
+    creativity_samples = 0
+    for row in rows:
+        if row.content_type != "ad_copy":
+            continue
+        creativity_level = (row.selected_image_option_id or "").strip().lower()
+        if not creativity_level:
+            continue
+        if creativity_level not in creativity_counts:
+            continue
+        creativity_counts[creativity_level] += 1
+        creativity_samples += 1
+
+    if creativity_samples > 0:
+        top_creativity_level = max(creativity_counts, key=creativity_counts.get)
+    else:
+        top_creativity_level = None
+
     return {
         "best_brand_voice": {
             "top_tone": top_tone,
@@ -392,4 +494,9 @@ def get_user_analytics() -> dict:
         "vad_summary": vad_summary,
         "weekly_tone_trend": weekly_tone_trend,
         "regional_style_preference": regional_style_preference,
+        "image_creativity_usage": {
+            "top_creativity_level": top_creativity_level,
+            "counts": creativity_counts,
+            "selected_samples": creativity_samples,
+        },
     }

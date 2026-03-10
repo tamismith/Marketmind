@@ -3,6 +3,7 @@ from ..controllers.ai_controller import (
     generate_ad_copy,
     generate_text_variants,
     select_text_variant,
+    select_ad_image,
     get_user_history,
     get_user_analytics,
 )
@@ -74,8 +75,10 @@ def ad_copy_endpoint():
         )
 
         return jsonify({
+        "content_id": result["content_id"],
         "ad_copy": result["ad_copy"],
         "image_base64": result["image_base64"],
+        "image_options": result.get("image_options", []),
         "evaluation": result["evaluation"],
         "meta": {
             "platform": platform,
@@ -211,6 +214,49 @@ def select_text_endpoint():
         return error_response(
             "SERVER_ERROR",
             "Something went wrong while selecting text variant",
+            500,
+        )
+
+
+@ai_blueprint.route("/select/ad-image", methods=["POST"])
+@jwt_required()
+def select_ad_image_endpoint():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return error_response(
+                "INVALID_REQUEST",
+                "Request body must be JSON",
+                400,
+            )
+
+        content_id = data.get("content_id")
+        image_option_id = (data.get("image_option_id") or "").strip()
+        image_base64 = (data.get("image_base64") or "").strip()
+
+        if content_id is None or not image_option_id or not image_base64:
+            return error_response(
+                "MISSING_FIELDS",
+                "content_id, image_option_id, and image_base64 are required",
+                400,
+                {"missing_fields": ["content_id", "image_option_id", "image_base64"]},
+            )
+
+        result = select_ad_image(
+            content_id=int(content_id),
+            image_option_id=image_option_id,
+            image_base64=image_base64,
+        )
+        return jsonify(result), 200
+
+    except ValueError as e:
+        return error_response("VALIDATION_ERROR", str(e), 400)
+    except LookupError as e:
+        return error_response("NOT_FOUND", str(e), 404)
+    except Exception:
+        return error_response(
+            "SERVER_ERROR",
+            "Something went wrong while saving ad image selection",
             500,
         )
 

@@ -94,6 +94,48 @@ IMAGE_STYLE_PRESETS = [
     "Human-centered candid brand moment with natural motion and authentic imperfection.",
 ]
 
+PLATFORM_IMAGE_BASELINES = {
+    "linkedin": {
+        "voice": "professional, corporate, polished, credibility-focused",
+        "creativity_bias": "low",
+    },
+    "instagram": {
+        "voice": "visual-first, lifestyle-rich, expressive, emotionally resonant",
+        "creativity_bias": "high",
+    },
+    "facebook": {
+        "voice": "community-friendly, warm, practical, relatable",
+        "creativity_bias": "medium",
+    },
+    "twitter/x": {
+        "voice": "punchy, modern, bold, fast-scrolling attention capture",
+        "creativity_bias": "medium-high",
+    },
+}
+
+IMAGE_CREATIVITY_OPTIONS = [
+    {
+        "id": "safe",
+        "label": "Safe",
+        "instruction": "Conservative, clear composition, restrained styling, minimal artistic risk.",
+    },
+    {
+        "id": "balanced",
+        "label": "Balanced",
+        "instruction": "Moderate creativity, attractive visual storytelling, still commercially safe.",
+    },
+    {
+        "id": "bold",
+        "label": "Bold",
+        "instruction": "High creativity with stronger visual contrast and expressive composition.",
+    },
+    {
+        "id": "experimental",
+        "label": "Experimental",
+        "instruction": "Most creative option: stylized mood, unconventional framing, high visual personality.",
+    },
+]
+
 
 def _choose_image_style_seed(*parts: str) -> str:
     seed = "|".join(parts).encode("utf-8")
@@ -156,6 +198,16 @@ def _region_visual_cues(region: str) -> str:
     return cues.get(
         region_key,
         "local context should feel authentic to the specified region with realistic environmental cues",
+    )
+
+
+def _platform_image_baseline(platform: str) -> dict:
+    return PLATFORM_IMAGE_BASELINES.get(
+        platform.strip().lower(),
+        {
+            "voice": "clean, audience-aware, commercial social content",
+            "creativity_bias": "medium",
+        },
     )
 
 def generate_marketing_text(
@@ -312,12 +364,15 @@ Return only the ad copy text.
 
     
     image_base64 = ""
+    image_options = []
 
     selected_image_style = _choose_image_style_seed(
         business_name, industry, platform, target_audience, tone
     )
     regional_visual_cues = _region_visual_cues(region)
-    image_prompt: str = f"""
+    platform_baseline = _platform_image_baseline(platform)
+
+    base_image_prompt: str = f"""
 Creative social media campaign image for a small business.
 
 Brand context:
@@ -330,6 +385,8 @@ Brand context:
 
 Art direction:
 - {selected_image_style}
+- Platform baseline ({platform}): {platform_baseline["voice"]}.
+- Default creativity level for this platform is {platform_baseline["creativity_bias"]}; keep outputs platform-appropriate.
 - Make the scene feel story-driven and emotionally resonant.
 - Use a strong focal subject with layered depth.
 - Add tactile details and natural imperfection for realism.
@@ -346,16 +403,37 @@ Strict constraints:
 - No distorted hands, faces, or anatomy.
 """
 
+    for option in IMAGE_CREATIVITY_OPTIONS:
+        option_prompt = f"""
+{base_image_prompt}
 
-    try:
-        image_request = ImageGenerationRequest(prompt=image_prompt)
-        image_base64 = ai_provider.generate_image_base64(image_request)
-    except AIProviderError as e:
-        print("STABILITY IMAGE ERROR:", e)
+Creativity mode:
+- Option: {option["label"]} ({option["id"]})
+- {option["instruction"]}
+"""
+        try:
+            image_request = ImageGenerationRequest(prompt=option_prompt)
+            generated_image = ai_provider.generate_image_base64(image_request)
+            if generated_image:
+                image_options.append(
+                    {
+                        "id": option["id"],
+                        "label": option["label"],
+                        "creativity_level": option["id"],
+                        "image_base64": generated_image,
+                        "platform_alignment": platform_baseline["voice"],
+                    }
+                )
+        except AIProviderError as e:
+            print(f"STABILITY IMAGE ERROR ({option['id']}):", e)
+
+    if image_options:
+        image_base64 = image_options[0]["image_base64"]
 
     
     # -------------------------
     return {
         "ad_copy": ad_copy,
-        "image_base64": image_base64
+        "image_base64": image_base64,
+        "image_options": image_options,
     }
