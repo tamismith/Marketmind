@@ -95,6 +95,10 @@ export default function Register() {
         ) : null}
 
         <div className="helper-row">
+          <Link className="link" to="/">
+            Back to Home
+          </Link>
+          <span>•</span>
           <span>Already have an account?</span>
           <Link className="link" to="/login">
             Login

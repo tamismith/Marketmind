@@ -1,12 +1,12 @@
 :root {
-  --bg: #0f1117;
-  --panel: #171a22;
-  --panel-2: #11131a;
-  --text: #eef1f6;
-  --muted: #a9b0bf;
-  --border: #2a2f3c;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --bg: #0b1220;
+  --panel: #121b2e;
+  --panel-2: #0f1728;
+  --text: #eaf1ff;
+  --muted: #9fb0cc;
+  --border: #24314a;
+  --primary: #0ea5a3;
+  --primary-hover: #0b8b89;
 
   --radius: 14px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
@@ -231,4 +231,243 @@ body {
 
 .logout:hover {
   background: rgba(255, 255, 255, 0.05);
+}
+
+/* ========================= */
+/* PAGE UI SYSTEM */
+/* ========================= */
+
+.pageStack {
+  display: grid;
+  gap: 16px;
+}
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: 22px;
+}
+
+.sectionCard {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: var(--panel-2);
+}
+
+.sectionCardDashed {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: rgba(17, 19, 26, 0.7);
+}
+
+.gridCols2 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gridCols3 {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.formGrid4 {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+}
+
+.statusError {
+  margin: 0;
+  color: #ffb4b4;
+}
+
+.statusSuccess {
+  margin: 0;
+  color: #9ee6b7;
+}
+
+.resultText {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
+.metaRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.evalBlock {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--muted);
+  display: grid;
+  gap: 5px;
+}
+
+.evalTitle {
+  color: var(--text);
+}
+
+.btnGhost {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.btnGhost:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btnInline {
+  width: auto;
+  min-width: 180px;
+}
+
+/* ========================= */
+/* LANDING PAGE */
+/* ========================= */
+
+.landingWrap {
+  min-height: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 40px 24px 28px;
+  display: grid;
+  gap: 20px;
+}
+
+.landingHero {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(79, 70, 229, 0.24), transparent 46%),
+    var(--panel);
+}
+
+.landingTag {
+  margin: 0 0 10px 0;
+  color: #c7ccff;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.landingTitle {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.12;
+  max-width: 18ch;
+}
+
+.landingSubtitle {
+  margin: 14px 0 0 0;
+  color: var(--muted);
+  font-size: 16px;
+  max-width: 68ch;
+  line-height: 1.6;
+}
+
+.landingActions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.landingBtn {
+  width: auto;
+  min-width: 200px;
+}
+
+.landingBtnGhost {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 200px;
+}
+
+.landingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1080px) {
+  .gridCols3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .shell {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .main {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .formGrid4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gridCols2,
+  .gridCols3,
+  .landingGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .contentPanel {
+    padding: 14px;
+  }
+
+  .formGrid4 {
+    grid-template-columns: 1fr;
+  }
 }

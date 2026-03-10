@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
@@ -8,8 +8,8 @@ import DashboardHome from "./pages/DashboardHome.jsx";
 import Generate from "./pages/Generate.jsx";
 import History from "./pages/History.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import NotFound from "./pages/NotFound.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import PublicOnlyRoute from "./components/PublicOnlyRoute.jsx";
 
 
 export default function App() {
@@ -19,19 +19,11 @@ export default function App() {
       <Route path="/" element={<Home />} />
       <Route
         path="/login"
-        element={
-          <PublicOnlyRoute>
-            <Login />
-          </PublicOnlyRoute>
-        }
+        element={<Login />}
       />
       <Route
         path="/register"
-        element={
-          <PublicOnlyRoute>
-            <Register />
-          </PublicOnlyRoute>
-        }
+        element={<Register />}
       />
 
       {/* App routes (nested) */}
@@ -51,7 +43,7 @@ export default function App() {
       
 
       {/* Fallback */}
-      <Route path="*" element={<div style={{ padding: 24 }}>404</div>} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

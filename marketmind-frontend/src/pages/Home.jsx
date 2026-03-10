@@ -9,24 +9,55 @@ export default function Home() {
   };
 
   return (
-    <div className="page-center">
-      <div className="card">
-        <h2>MarketMind</h2>
-        <p>
-          AI-powered marketing assistant for SMEs — generate content, track tone, manage credits,
-          and review history.
+    <div className="landingWrap">
+      <section className="landingHero">
+        <p className="landingTag">AI Marketing Platform for SMEs</p>
+        <h1 className="landingTitle">
+          Generate better campaigns with feedback-driven brand learning
+        </h1>
+        <p className="landingSubtitle">
+          MarketMind helps you generate A/B marketing content, evaluate tone, save winning
+          choices, and build a stronger brand voice over time.
         </p>
 
-        <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
-          <button className="btn" onClick={handleStart}>
-            Start generating
+        <div className="landingActions">
+          <button className="btn landingBtn" onClick={handleStart}>
+            Begin Generation
           </button>
-
-          <div className="helper-row">
-            <span>Already have an account?</span>
-            <Link className="link" to="/login">Log in</Link>
-          </div>
+          <Link className="btnGhost landingBtnGhost" to="/register">
+            Create Account
+          </Link>
         </div>
+      </section>
+
+      <section className="landingGrid">
+        <article className="sectionCard">
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>A/B Content Generation</h3>
+          <p className="muted">
+            Generate two platform-ready variants per request and compare style before publishing.
+          </p>
+        </article>
+
+        <article className="sectionCard">
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>Brand Memory Loop</h3>
+          <p className="muted">
+            Select preferred outputs and let your future prompts reflect those choices.
+          </p>
+        </article>
+
+        <article className="sectionCard">
+          <h3 style={{ marginTop: 0, marginBottom: 8 }}>History & Analytics</h3>
+          <p className="muted">
+            Review generation history and track tone and regional preference patterns.
+          </p>
+        </article>
+      </section>
+
+      <div className="helper-row">
+        <span>Already have an account?</span>
+        <Link className="link" to="/login">
+          Log in
+        </Link>
       </div>
     </div>
   );

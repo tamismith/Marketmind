@@ -71,6 +71,10 @@ export default function Login() {
         ) : null}
 
         <div className="helper-row">
+          <Link className="link" to="/">
+            Back to Home
+          </Link>
+          <span>•</span>
           <span>No account?</span>
           <Link className="link" to="/register">
             Register

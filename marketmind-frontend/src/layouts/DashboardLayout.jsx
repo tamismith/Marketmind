@@ -1,12 +1,21 @@
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Link, Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { clearToken } from "../api/client";
 export default function DashboardLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const topbarTitle = {
+    "/app": "Dashboard",
+    "/app/generate": "Generate",
+    "/app/history": "History",
+    "/app/analytics": "Analytics",
+  }[location.pathname] || "Dashboard";
 
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">MarketMind</div>
+        <Link to="/" className="brand link" style={{ textDecoration: "none" }}>
+          MarketMind
+        </Link>
 
         <nav className="nav">
           <NavLink
@@ -67,7 +76,7 @@ export default function DashboardLayout() {
 
       <main className="main">
         <div className="topbar">
-          <h2 style={{ margin: 0 }}>Dashboard</h2>
+          <h2 style={{ margin: 0 }}>{topbarTitle}</h2>
           <span className="pill">38 credits</span>
         </div>
 

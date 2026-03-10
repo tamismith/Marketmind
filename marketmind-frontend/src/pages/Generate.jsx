@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 
 const initialForm = {
@@ -13,23 +14,37 @@ const initialForm = {
   region: "",
 };
 
+const initialAdForm = {
+  business_name: "",
+  industry: "",
+  target_audience: "",
+  tone: "",
+  platform: "",
+  description: "",
+  goal: "",
+  length: "",
+  region: "",
+  offer: "",
+  cta: "",
+};
+
 function EvalBlock({ evaluation }) {
   if (!evaluation) return null;
   const explanation = evaluation.explanation;
 
   return (
-    <div style={{ marginTop: 10, fontSize: 14, color: "#a9b0bf" }}>
+    <div className="evalBlock">
       <div>
-        <strong style={{ color: "#eef1f6" }}>Overall feel:</strong> {evaluation.tone}
+        <strong className="evalTitle">Overall feel:</strong> {evaluation.tone}
       </div>
       {typeof explanation === "string" && explanation ? (
         <div>
-          <strong style={{ color: "#eef1f6" }}>Why:</strong> {explanation}
+          <strong className="evalTitle">Why:</strong> {explanation}
         </div>
       ) : null}
       {explanation && typeof explanation === "object" ? (
-        <div style={{ marginTop: 6 }}>
-          <strong style={{ color: "#eef1f6" }}>Why:</strong>
+        <div>
+          <strong className="evalTitle">Why:</strong>
           {explanation.tone_summary ? <div>Tone: {explanation.tone_summary}</div> : null}
           {explanation.voice_summary ? <div>Voice: {explanation.voice_summary}</div> : null}
           {explanation.energy_summary ? <div>Energy: {explanation.energy_summary}</div> : null}
@@ -40,12 +55,22 @@ function EvalBlock({ evaluation }) {
 }
 
 export default function Generate() {
+  const navigate = useNavigate();
+  const [activeMode, setActiveMode] = useState("text");
   const [form, setForm] = useState(initialForm);
   const [result, setResult] = useState(null);
+  const [adForm, setAdForm] = useState(initialAdForm);
+  const [adResult, setAdResult] = useState(null);
+  const [selectedAdImageId, setSelectedAdImageId] = useState("");
   const [memoryPreview, setMemoryPreview] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isAdGenerating, setIsAdGenerating] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
+  const [isSavingAdImage, setIsSavingAdImage] = useState(false);
+  const [pendingTextSelection, setPendingTextSelection] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [adErrorMessage, setAdErrorMessage] = useState("");
+  const [adSuccessMessage, setAdSuccessMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
   const loadMemoryPreview = async () => {
@@ -78,6 +103,11 @@ export default function Generate() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const onAdChange = (e) => {
+    const { name, value } = e.target;
+    setAdForm((prev) => ({ ...prev, [name]: value }));
+  };
+
   const onGenerate = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -87,6 +117,7 @@ export default function Generate() {
     try {
       const data = await api.post("/api/ai/generate/text", form);
       setResult(data);
+      setPendingTextSelection("");
     } catch (error) {
       setErrorMessage(error.message || "Failed to generate text.");
     } finally {
@@ -94,8 +125,8 @@ export default function Generate() {
     }
   };
 
-  const onSelectVariant = async (selectedVariant) => {
-    if (!result?.content_id) return;
+  const onSaveSelectedVariant = async () => {
+    if (!result?.content_id || !pendingTextSelection) return;
 
     setErrorMessage("");
     setSuccessMessage("");
@@ -104,10 +135,10 @@ export default function Generate() {
     try {
       await api.post("/api/ai/select/text", {
         content_id: result.content_id,
-        selected_variant: selectedVariant,
+        selected_variant: pendingTextSelection,
       });
       setSuccessMessage(
-        `Variant ${selectedVariant} selected. Preference saved for future generations.`,
+        `Variant ${pendingTextSelection} saved. You can now track it in History and Dashboard.`,
       );
       await loadMemoryPreview();
     } catch (error) {
@@ -117,103 +148,298 @@ export default function Generate() {
     }
   };
 
+  const onGenerateAdCopy = async (e) => {
+    e.preventDefault();
+    setAdErrorMessage("");
+    setAdSuccessMessage("");
+    setIsAdGenerating(true);
+
+    try {
+      const data = await api.post("/api/ai/ad-copy", adForm);
+      setAdResult(data);
+      const defaultId = data?.image_options?.[0]?.id || "";
+      setSelectedAdImageId(defaultId);
+    } catch (error) {
+      setAdErrorMessage(error.message || "Failed to generate ad copy.");
+    } finally {
+      setIsAdGenerating(false);
+    }
+  };
+
+  const onSaveAdImage = async (option) => {
+    if (!adResult?.content_id || !option?.id || !option?.image_base64) {
+      setAdErrorMessage("Missing image selection details. Please regenerate and try again.");
+      return;
+    }
+    setAdErrorMessage("");
+    setAdSuccessMessage("");
+    setIsSavingAdImage(true);
+    try {
+      await api.post("/api/ai/select/ad-image", {
+        content_id: adResult.content_id,
+        image_option_id: option.id,
+        image_base64: option.image_base64,
+      });
+      setSelectedAdImageId(option.id);
+      setAdSuccessMessage(`Image option "${option.label}" saved. Check Dashboard or History.`);
+    } catch (error) {
+      setAdErrorMessage(error.message || "Failed to save selected image.");
+    } finally {
+      setIsSavingAdImage(false);
+    }
+  };
+
   return (
-    <div style={{ display: "grid", gap: 18 }}>
-      <h3 style={{ margin: 0 }}>Generate Marketing Text</h3>
+    <div className="pageStack">
+      <div className="pageHeader">
+        <h3 className="pageTitle">Generate Marketing Text</h3>
+      </div>
 
-      <form className="form" onSubmit={onGenerate}>
-        <input className="input" name="business_name" placeholder="Business name" value={form.business_name} onChange={onChange} required />
-        <input className="input" name="industry" placeholder="Industry" value={form.industry} onChange={onChange} required />
-        <input className="input" name="target_audience" placeholder="Target audience" value={form.target_audience} onChange={onChange} required />
-        <input className="input" name="description" placeholder="Description" value={form.description} onChange={onChange} required />
-        <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 10 }}>
-          <input className="input" name="tone" placeholder="Tone" value={form.tone} onChange={onChange} required />
-          <input className="input" name="platform" placeholder="Platform" value={form.platform} onChange={onChange} required />
-          <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
-          <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
-        </div>
-
-        <button className="btn" type="submit" disabled={isGenerating}>
-          {isGenerating ? "Generating..." : "Generate A/B Variants"}
+      <div className="actionRow">
+        <button
+          className={activeMode === "text" ? "btn btnInline" : "btnGhost btnInline"}
+          onClick={() => setActiveMode("text")}
+        >
+          Text Generation
         </button>
-      </form>
+        <button
+          className={activeMode === "ad" ? "btn btnInline" : "btnGhost btnInline"}
+          onClick={() => setActiveMode("ad")}
+        >
+          Ad Copy + Image
+        </button>
+      </div>
 
-      {errorMessage ? (
-        <p style={{ margin: 0, color: "#ffb4b4" }}>{errorMessage}</p>
-      ) : null}
-      {successMessage ? (
-        <p style={{ margin: 0, color: "#9ee6b7" }}>{successMessage}</p>
+      {activeMode === "text" ? (
+        <div className="sectionCard">
+          <form className="form" onSubmit={onGenerate}>
+            <input className="input" name="business_name" placeholder="Business name" value={form.business_name} onChange={onChange} required />
+            <input className="input" name="industry" placeholder="Industry" value={form.industry} onChange={onChange} required />
+            <input className="input" name="target_audience" placeholder="Target audience" value={form.target_audience} onChange={onChange} required />
+            <input className="input" name="description" placeholder="Description" value={form.description} onChange={onChange} required />
+            <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
+
+            <div className="formGrid4">
+              <input className="input" name="tone" placeholder="Tone" value={form.tone} onChange={onChange} required />
+              <input className="input" name="platform" placeholder="Platform" value={form.platform} onChange={onChange} required />
+              <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
+              <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
+            </div>
+
+            <button className="btn" type="submit" disabled={isGenerating}>
+              {isGenerating ? "Generating..." : "Generate A/B Variants"}
+            </button>
+          </form>
+        </div>
       ) : null}
 
-      <div style={{ border: "1px solid #2a2f3c", borderRadius: 12, padding: 14, background: "#11131a" }}>
-        <h4 style={{ marginTop: 0, marginBottom: 8 }}>Brand Memory Preview</h4>
-        {memoryPreview ? (
-          <div style={{ color: "#a9b0bf", fontSize: 14, display: "grid", gap: 6 }}>
-            <div>
-              Preferred voice so far:{" "}
-              <strong style={{ color: "#eef1f6" }}>
-                {memoryPreview.topTone || "Not enough data yet"}
-              </strong>
-            </div>
-            <div>
-              Most selected region style:{" "}
-              <strong style={{ color: "#eef1f6" }}>
-                {memoryPreview.topRegion || "Not enough data yet"}
-              </strong>
-            </div>
-            <div>
-              Selections learned from:{" "}
-              <strong style={{ color: "#eef1f6" }}>
-                {memoryPreview.selectedSamples}
-              </strong>
-            </div>
-            {memoryPreview.latestWeek ? (
+      {activeMode === "text" && errorMessage ? (
+        <p className="statusError">{errorMessage}</p>
+      ) : null}
+      {activeMode === "text" && successMessage ? (
+        <div className="sectionCard">
+          <p className="statusSuccess">{successMessage}</p>
+          <div className="actionRow" style={{ marginTop: 10 }}>
+            <button className="btnGhost btnInline" onClick={() => navigate("/app/history")}>
+              Go to History
+            </button>
+            <button className="btnGhost btnInline" onClick={() => navigate("/app/analytics")}>
+              Go to Analytics
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {activeMode === "text" ? (
+        <div className="sectionCard">
+          <h4 style={{ marginTop: 0, marginBottom: 8 }}>Brand Memory Preview</h4>
+          {memoryPreview ? (
+            <div style={{ display: "grid", gap: 6 }} className="muted">
               <div>
-                Latest active week:{" "}
-                <strong style={{ color: "#eef1f6" }}>
-                  {memoryPreview.latestWeek.week_start_date} to {memoryPreview.latestWeek.week_end_date}
+                Preferred voice so far:{" "}
+                <strong className="evalTitle">
+                  {memoryPreview.topTone || "Not enough data yet"}
                 </strong>
               </div>
-            ) : null}
-          </div>
-        ) : (
-          <p style={{ margin: 0, color: "#a9b0bf" }}>
-            No memory insights yet. Select a few variants to build preferences.
-          </p>
-        )}
-      </div>
+              <div>
+                Most selected region style:{" "}
+                <strong className="evalTitle">
+                  {memoryPreview.topRegion || "Not enough data yet"}
+                </strong>
+              </div>
+              <div>
+                Selections learned from:{" "}
+                <strong className="evalTitle">
+                  {memoryPreview.selectedSamples}
+                </strong>
+              </div>
+              {memoryPreview.latestWeek ? (
+                <div>
+                  Latest active week:{" "}
+                  <strong className="evalTitle">
+                    {memoryPreview.latestWeek.week_start_date} to {memoryPreview.latestWeek.week_end_date}
+                  </strong>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="muted">
+              No memory insights yet. Select a few variants to build preferences.
+            </p>
+          )}
+        </div>
+      ) : null}
 
-      {result ? (
-        <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-          <div style={{ border: "1px solid #2a2f3c", borderRadius: 12, padding: 14, background: "#11131a" }}>
+      {activeMode === "text" && result ? (
+        <div className="gridCols2">
+          <div className="sectionCard">
             <h4 style={{ marginTop: 0 }}>Variant A</h4>
-            <p style={{ whiteSpace: "pre-wrap" }}>{result.variant_a}</p>
+            <p className="resultText">{result.variant_a}</p>
             <EvalBlock evaluation={result.evaluation_a} />
-            <button className="btn" style={{ marginTop: 10 }} onClick={() => onSelectVariant("A")} disabled={isSelecting}>
-              {isSelecting ? "Saving..." : "Select A"}
+            <button
+              className={pendingTextSelection === "A" ? "btn" : "btnGhost"}
+              style={{ marginTop: 10, width: "100%" }}
+              onClick={() => setPendingTextSelection("A")}
+            >
+              {pendingTextSelection === "A" ? "Chosen A" : "Choose A"}
             </button>
           </div>
 
-          <div style={{ border: "1px solid #2a2f3c", borderRadius: 12, padding: 14, background: "#11131a" }}>
+          <div className="sectionCard">
             <h4 style={{ marginTop: 0 }}>Variant B</h4>
-            <p style={{ whiteSpace: "pre-wrap" }}>{result.variant_b}</p>
+            <p className="resultText">{result.variant_b}</p>
             <EvalBlock evaluation={result.evaluation_b} />
-            <button className="btn" style={{ marginTop: 10 }} onClick={() => onSelectVariant("B")} disabled={isSelecting}>
-              {isSelecting ? "Saving..." : "Select B"}
+            <button
+              className={pendingTextSelection === "B" ? "btn" : "btnGhost"}
+              style={{ marginTop: 10, width: "100%" }}
+              onClick={() => setPendingTextSelection("B")}
+            >
+              {pendingTextSelection === "B" ? "Chosen B" : "Choose B"}
             </button>
           </div>
         </div>
       ) : null}
 
-      <div style={{ border: "1px dashed #2a2f3c", borderRadius: 12, padding: 14 }}>
-        <h4 style={{ marginTop: 0, marginBottom: 6 }}>Ad Copy (Placeholder)</h4>
-        <p style={{ margin: 0, color: "#a9b0bf" }}>
-          Ad copy and image generation UI will be added next. Backend endpoint exists at
-          <code> /api/ai/ad-copy</code>.
-        </p>
-      </div>
+      {activeMode === "text" && result ? (
+        <div className="sectionCard">
+          <div className="metaRow">
+            <span>
+              Selected for save:{" "}
+              <strong className="evalTitle">
+                {pendingTextSelection ? `Variant ${pendingTextSelection}` : "None yet"}
+              </strong>
+            </span>
+          </div>
+          <div className="actionRow" style={{ marginTop: 10 }}>
+            <button
+              className="btn btnInline"
+              onClick={onSaveSelectedVariant}
+              disabled={!pendingTextSelection || isSelecting}
+            >
+              {isSelecting ? "Saving..." : "Save Selected Variant"}
+            </button>
+            <button className="btnGhost btnInline" onClick={() => navigate("/app/history")}>
+              View Saved History
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {activeMode === "ad" ? (
+        <div className="sectionCard">
+          <h4 style={{ marginTop: 0, marginBottom: 6 }}>Generate Ad Copy + Image</h4>
+          <p className="muted" style={{ marginBottom: 12 }}>
+            Create conversion-focused ad copy with a matching image.
+          </p>
+
+          <form className="form" onSubmit={onGenerateAdCopy}>
+            <input className="input" name="business_name" placeholder="Business name" value={adForm.business_name} onChange={onAdChange} required />
+            <input className="input" name="industry" placeholder="Industry" value={adForm.industry} onChange={onAdChange} required />
+            <input className="input" name="target_audience" placeholder="Target audience" value={adForm.target_audience} onChange={onAdChange} required />
+            <input className="input" name="description" placeholder="Description" value={adForm.description} onChange={onAdChange} required />
+            <input className="input" name="goal" placeholder="Goal (optional)" value={adForm.goal} onChange={onAdChange} />
+
+            <div className="formGrid4">
+              <input className="input" name="tone" placeholder="Tone" value={adForm.tone} onChange={onAdChange} required />
+              <input className="input" name="platform" placeholder="Platform" value={adForm.platform} onChange={onAdChange} required />
+              <input className="input" name="length" placeholder="Length" value={adForm.length} onChange={onAdChange} />
+              <input className="input" name="region" placeholder="Region" value={adForm.region} onChange={onAdChange} />
+            </div>
+
+            <div className="gridCols2">
+              <input className="input" name="offer" placeholder="Offer (optional)" value={adForm.offer} onChange={onAdChange} />
+              <input className="input" name="cta" placeholder="CTA (optional)" value={adForm.cta} onChange={onAdChange} />
+            </div>
+
+            <button className="btn" type="submit" disabled={isAdGenerating}>
+              {isAdGenerating ? "Generating ad..." : "Generate Ad Copy"}
+            </button>
+          </form>
+
+          {adErrorMessage ? <p className="statusError" style={{ marginTop: 12 }}>{adErrorMessage}</p> : null}
+          {adSuccessMessage ? <p className="statusSuccess" style={{ marginTop: 12 }}>{adSuccessMessage}</p> : null}
+
+          {adResult ? (
+            <div className="gridCols2" style={{ marginTop: 14 }}>
+              <div className="sectionCard">
+                <h4 style={{ marginTop: 0 }}>Ad Copy</h4>
+                <p className="resultText">{adResult.ad_copy}</p>
+                <EvalBlock evaluation={adResult.evaluation} />
+              </div>
+              <div className="sectionCard">
+                <h4 style={{ marginTop: 0, marginBottom: 8 }}>Image Options</h4>
+                {adResult.image_options && adResult.image_options.length > 0 ? (
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {adResult.image_options.map((option) => {
+                      const isSelected = selectedAdImageId === option.id;
+                      return (
+                        <div
+                          key={option.id}
+                          className="sectionCard"
+                          style={{
+                            borderColor: isSelected ? "#0ea5a3" : undefined,
+                            boxShadow: isSelected ? "0 0 0 2px rgba(14, 165, 163, 0.2)" : "none",
+                          }}
+                        >
+                          <div className="metaRow">
+                            <strong className="evalTitle">{option.label}</strong>
+                            <span>{option.creativity_level}</span>
+                          </div>
+                          <img
+                            src={`data:image/png;base64,${option.image_base64}`}
+                            alt={`${option.label} ad visual option`}
+                            style={{ width: "100%", borderRadius: 10, border: "1px solid #24314a", marginTop: 8 }}
+                          />
+                          <button
+                            type="button"
+                            className={isSelected ? "btn" : "btnGhost"}
+                            style={{ marginTop: 10, width: "100%" }}
+                            onClick={() => onSaveAdImage(option)}
+                            disabled={isSavingAdImage}
+                          >
+                            {isSavingAdImage && isSelected ? "Saving..." : isSelected ? "Saved" : "Use This Image"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : adResult.image_base64 ? (
+                  <div>
+                    <p className="muted" style={{ marginBottom: 8 }}>Fallback image (single option).</p>
+                    <img
+                      src={`data:image/png;base64,${adResult.image_base64}`}
+                      alt="Generated ad visual"
+                      style={{ width: "100%", borderRadius: 10, border: "1px solid #24314a" }}
+                    />
+                  </div>
+                ) : (
+                  <p className="muted">No image returned for this request.</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
