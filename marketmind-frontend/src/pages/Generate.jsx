@@ -26,6 +26,13 @@ const initialAdForm = {
   region: "",
   offer: "",
   cta: "",
+  color_palette: "",
+  high_quality: true,
+  style_preset: "realistic",
+  aspect_ratio: "1:1",
+  shot_type: "medium",
+  include_keywords: "",
+  avoid_keywords: "",
 };
 
 function EvalBlock({ evaluation }) {
@@ -104,8 +111,8 @@ export default function Generate() {
   };
 
   const onAdChange = (e) => {
-    const { name, value } = e.target;
-    setAdForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setAdForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
   const onGenerate = async (e) => {
@@ -370,6 +377,59 @@ export default function Generate() {
               <input className="input" name="offer" placeholder="Offer (optional)" value={adForm.offer} onChange={onAdChange} />
               <input className="input" name="cta" placeholder="CTA (optional)" value={adForm.cta} onChange={onAdChange} />
             </div>
+
+            <div className="formGrid4">
+              <select className="input" name="style_preset" value={adForm.style_preset} onChange={onAdChange}>
+                <option value="realistic">Style: Realistic</option>
+                <option value="bold">Style: Bold</option>
+                <option value="minimal">Style: Minimal</option>
+                <option value="warm">Style: Warm</option>
+              </select>
+              <select className="input" name="aspect_ratio" value={adForm.aspect_ratio} onChange={onAdChange}>
+                <option value="1:1">Aspect: 1:1</option>
+                <option value="4:5">Aspect: 4:5</option>
+                <option value="16:9">Aspect: 16:9</option>
+              </select>
+              <select className="input" name="shot_type" value={adForm.shot_type} onChange={onAdChange}>
+                <option value="close_up">Shot: Close-up</option>
+                <option value="medium">Shot: Medium</option>
+                <option value="wide">Shot: Wide</option>
+              </select>
+              <input
+                className="input"
+                name="color_palette"
+                placeholder="Palette (earthy, pastel, vibrant...)"
+                value={adForm.color_palette}
+                onChange={onAdChange}
+              />
+            </div>
+
+            <div className="gridCols2">
+              <input
+                className="input"
+                name="include_keywords"
+                placeholder="Include keywords (comma-separated)"
+                value={adForm.include_keywords}
+                onChange={onAdChange}
+              />
+              <input
+                className="input"
+                name="avoid_keywords"
+                placeholder="Avoid keywords (comma-separated)"
+                value={adForm.avoid_keywords}
+                onChange={onAdChange}
+              />
+            </div>
+
+            <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="checkbox"
+                name="high_quality"
+                checked={adForm.high_quality}
+                onChange={onAdChange}
+              />
+              High quality image mode (sharper, slower)
+            </label>
 
             <button className="btn" type="submit" disabled={isAdGenerating}>
               {isAdGenerating ? "Generating ad..." : "Generate Ad Copy"}

@@ -24,6 +24,15 @@ REQUIRED_FIELDS = [
     "description"
 ]
 
+ALLOWED_STYLE_PRESETS = {"realistic", "bold", "minimal", "warm"}
+ALLOWED_ASPECT_RATIOS = {"1:1", "4:5", "16:9"}
+ALLOWED_SHOT_TYPES = {"close_up", "medium", "wide"}
+
+def _to_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
 
 @ai_blueprint.route("/ad-copy", methods=["POST"])
 @jwt_required()
@@ -59,6 +68,35 @@ def ad_copy_endpoint():
         region = (data.get("region") or "UK").strip()
         offer = (data.get("offer") or "").strip()
         cta = (data.get("cta") or "").strip()
+        color_palette = (data.get("color_palette") or "").strip()
+        high_quality = _to_bool(data.get("high_quality", True))
+        style_preset = (data.get("style_preset") or "realistic").strip().lower()
+        aspect_ratio = (data.get("aspect_ratio") or "1:1").strip()
+        shot_type = (data.get("shot_type") or "medium").strip().lower()
+        include_keywords = data.get("include_keywords") or ""
+        avoid_keywords = data.get("avoid_keywords") or ""
+
+        if style_preset not in ALLOWED_STYLE_PRESETS:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Invalid style_preset",
+                400,
+                {"allowed_values": sorted(ALLOWED_STYLE_PRESETS)},
+            )
+        if aspect_ratio not in ALLOWED_ASPECT_RATIOS:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Invalid aspect_ratio",
+                400,
+                {"allowed_values": sorted(ALLOWED_ASPECT_RATIOS)},
+            )
+        if shot_type not in ALLOWED_SHOT_TYPES:
+            return error_response(
+                "VALIDATION_ERROR",
+                "Invalid shot_type",
+                400,
+                {"allowed_values": sorted(ALLOWED_SHOT_TYPES)},
+            )
 
         result = generate_ad_copy(
             business_name=business_name,
@@ -71,7 +109,14 @@ def ad_copy_endpoint():
             length=length,
             region=region,
             offer=offer,
-            cta=cta
+            cta=cta,
+            color_palette=color_palette,
+            high_quality=high_quality,
+            style_preset=style_preset,
+            aspect_ratio=aspect_ratio,
+            shot_type=shot_type,
+            include_keywords=include_keywords,
+            avoid_keywords=avoid_keywords,
         )
 
         return jsonify({
@@ -84,7 +129,12 @@ def ad_copy_endpoint():
             "platform": platform,
             "tone": tone,
             "length": length,
-            "region": region
+            "region": region,
+            "color_palette": color_palette,
+            "high_quality": high_quality,
+            "style_preset": style_preset,
+            "aspect_ratio": aspect_ratio,
+            "shot_type": shot_type,
         }
     }), 200
 

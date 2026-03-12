@@ -11,6 +11,7 @@ export default function Home() {
   return (
     <div className="landingWrap">
       <section className="landingHero">
+        <div className="landingBrand">MarketMind</div>
         <p className="landingTag">AI Marketing Platform for SMEs</p>
         <h1 className="landingTitle">
           Generate better campaigns with feedback-driven brand learning

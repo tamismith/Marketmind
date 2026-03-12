@@ -86,7 +86,14 @@ def generate_ad_copy(
     region: str = "UK",
     length: str = "short",
     offer: str = "",
-    cta: str = ""
+    cta: str = "",
+    color_palette: str = "",
+    high_quality: bool = True,
+    style_preset: str = "realistic",
+    aspect_ratio: str = "1:1",
+    shot_type: str = "medium",
+    include_keywords="",
+    avoid_keywords="",
 ) -> dict:
     
     result = generate_ad_text(
@@ -100,7 +107,14 @@ def generate_ad_copy(
         region=region,
         length=length,
         offer=offer,
-        cta=cta
+        cta=cta,
+        color_palette=color_palette,
+        high_quality=high_quality,
+        style_preset=style_preset,
+        aspect_ratio=aspect_ratio,
+        shot_type=shot_type,
+        include_keywords=include_keywords,
+        avoid_keywords=avoid_keywords,
     )
     ad_copy = result.get("ad_copy", "")
     if not ad_copy or not ad_copy.strip():
@@ -121,6 +135,13 @@ Length: {length}
 Region: {region}
 Offer: {offer}
 CTA: {cta}
+Color palette: {color_palette}
+High quality image mode: {"enabled" if high_quality else "disabled"}
+Style preset: {style_preset}
+Aspect ratio: {aspect_ratio}
+Shot type: {shot_type}
+Include keywords: {include_keywords}
+Avoid keywords: {avoid_keywords}
 """
 
     content = GeneratedContent(

@@ -87,7 +87,7 @@ export default function Analytics() {
 
       {!isLoading && !errorMessage ? (
         <div className="sectionCard">
-          <h4 style={{ marginTop: 0 }}>Weekly Tone Trend (Visual)</h4>
+          <h4 style={{ marginTop: 0 }}>Weekly Tone Trend </h4>
           {weeklyToneData.length > 0 ? (
             <div style={{ width: "100%", height: 300 }}>
               <ResponsiveContainer>
@@ -112,7 +112,7 @@ export default function Analytics() {
       {!isLoading && !errorMessage ? (
         <div className="gridCols2">
           <div className="sectionCard">
-            <h4 style={{ marginTop: 0 }}>Regional Preference (Visual)</h4>
+            <h4 style={{ marginTop: 0 }}>Regional Preference </h4>
             {regionData.length > 0 ? (
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>
@@ -131,7 +131,7 @@ export default function Analytics() {
           </div>
 
           <div className="sectionCard">
-            <h4 style={{ marginTop: 0 }}>Image Creativity Usage (Visual)</h4>
+            <h4 style={{ marginTop: 0 }}>Image Creativity Usage </h4>
             {imageSamples > 0 ? (
               <div style={{ width: "100%", height: 300 }}>
                 <ResponsiveContainer>

@@ -136,6 +136,35 @@ IMAGE_CREATIVITY_OPTIONS = [
     },
 ]
 
+PALETTE_PRESETS = {
+    "earthy": "earthy tones (olive, warm brown, beige), natural muted saturation",
+    "pastel": "soft pastel tones, gentle contrast, light airy color mood",
+    "vibrant": "vibrant saturated colors with strong but controlled contrast",
+    "corporate_blue": "corporate blue-led palette with neutral grays and clean whites",
+    "warm": "warm palette with amber, coral, and soft golden highlights",
+    "cool": "cool palette with blue/teal tones and crisp low-warmth balance",
+    "monochrome": "monochrome palette with tonal depth and grayscale discipline",
+}
+
+STYLE_PRESET_RULES = {
+    "realistic": "photorealistic style, natural textures, commercially authentic details",
+    "bold": "bold visual style, stronger contrast, more expressive art direction",
+    "minimal": "minimal visual style, clean composition, reduced clutter and focused subject",
+    "warm": "warm visual style, inviting mood, soft highlight glow and approachable tone",
+}
+
+SHOT_TYPE_RULES = {
+    "close_up": "close-up framing that emphasizes subject detail and texture",
+    "medium": "medium shot framing with balanced subject and contextual background",
+    "wide": "wide shot framing that shows environment and setting context",
+}
+
+ASPECT_RATIO_DIMENSIONS = {
+    "1:1": (1024, 1024),
+    "4:5": (896, 1152),
+    "16:9": (1344, 768),
+}
+
 
 def _choose_image_style_seed(*parts: str) -> str:
     seed = "|".join(parts).encode("utf-8")
@@ -209,6 +238,44 @@ def _platform_image_baseline(platform: str) -> dict:
             "creativity_bias": "medium",
         },
     )
+
+
+def _palette_instruction(color_palette: str) -> str:
+    if not color_palette or not color_palette.strip():
+        return "No explicit palette provided; keep color grading platform-appropriate and realistic."
+    palette_key = color_palette.strip().lower()
+    preset = PALETTE_PRESETS.get(palette_key)
+    if preset:
+        return f"Use this color palette direction: {preset}."
+    return (
+        f"Use this user-defined color palette direction: {color_palette.strip()}. "
+        "Respect it while keeping visual realism and brand appropriateness."
+    )
+
+
+def _style_preset_instruction(style_preset: str) -> str:
+    return STYLE_PRESET_RULES.get(
+        (style_preset or "").strip().lower(),
+        STYLE_PRESET_RULES["realistic"],
+    )
+
+
+def _shot_type_instruction(shot_type: str) -> str:
+    return SHOT_TYPE_RULES.get(
+        (shot_type or "").strip().lower(),
+        SHOT_TYPE_RULES["medium"],
+    )
+
+
+def _aspect_ratio_dimensions(aspect_ratio: str) -> tuple[int, int]:
+    return ASPECT_RATIO_DIMENSIONS.get(aspect_ratio, ASPECT_RATIO_DIMENSIONS["1:1"])
+
+
+def _normalize_keywords(value) -> list[str]:
+    if isinstance(value, list):
+        return [str(v).strip() for v in value if str(v).strip()]
+    text = str(value or "")
+    return [part.strip() for part in text.split(",") if part.strip()]
 
 def generate_marketing_text(
     business_name: str,
@@ -296,7 +363,14 @@ def generate_ad_text(
     region: str = "UK",
     length: str = "short",
     offer: str = "",
-    cta: str = ""
+    cta: str = "",
+    color_palette: str = "",
+    high_quality: bool = True,
+    style_preset: str = "realistic",
+    aspect_ratio: str = "1:1",
+    shot_type: str = "medium",
+    include_keywords="",
+    avoid_keywords="",
 ) -> dict:
     """
     Generates conversion-focused ad copy using GPT
@@ -371,6 +445,20 @@ Return only the ad copy text.
     )
     regional_visual_cues = _region_visual_cues(region)
     platform_baseline = _platform_image_baseline(platform)
+    palette_instruction = _palette_instruction(color_palette)
+    style_preset_instruction = _style_preset_instruction(style_preset)
+    shot_type_instruction = _shot_type_instruction(shot_type)
+    image_width, image_height = _aspect_ratio_dimensions(aspect_ratio)
+    include_list = _normalize_keywords(include_keywords)
+    avoid_list = _normalize_keywords(avoid_keywords)
+    include_line = ", ".join(include_list) if include_list else "None"
+    avoid_line = ", ".join(avoid_list) if avoid_list else "None"
+
+    quality_instruction = (
+        "Prioritize sharp commercial detail, clean edge definition, and crisp focus."
+        if high_quality
+        else "Keep quality acceptable while optimizing for faster generation."
+    )
 
     base_image_prompt: str = f"""
 Creative social media campaign image for a small business.
@@ -387,16 +475,22 @@ Art direction:
 - {selected_image_style}
 - Platform baseline ({platform}): {platform_baseline["voice"]}.
 - Default creativity level for this platform is {platform_baseline["creativity_bias"]}; keep outputs platform-appropriate.
+- Color palette direction: {palette_instruction}
+- Style preset direction: {style_preset_instruction}
+- Shot type direction: {shot_type_instruction}
 - Make the scene feel story-driven and emotionally resonant.
 - Use a strong focal subject with layered depth.
 - Add tactile details and natural imperfection for realism.
 - Keep visual mood aligned with audience expectations for {platform}.
 - Regional cues: {regional_visual_cues}.
+- Include these visual elements if natural: {include_line}
+- Avoid these visual elements: {avoid_line}
 
 Lighting and composition:
 - Natural cinematic light, controlled highlights, realistic shadows.
 - Rule-of-thirds composition with clean negative space for social layout.
 - Premium commercial quality, not stock-photo stiffness.
+- Quality mode: {quality_instruction}
 
 Strict constraints:
 - No text, no letters, no logos, no watermark, no signage.
@@ -412,7 +506,13 @@ Creativity mode:
 - {option["instruction"]}
 """
         try:
-            image_request = ImageGenerationRequest(prompt=option_prompt)
+            image_request = ImageGenerationRequest(
+                prompt=option_prompt,
+                width=image_width,
+                height=image_height,
+                cfg_scale=8 if high_quality else 7,
+                steps=40 if high_quality else 30,
+            )
             generated_image = ai_provider.generate_image_base64(image_request)
             if generated_image:
                 image_options.append(

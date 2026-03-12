@@ -374,6 +374,16 @@ body {
     var(--panel);
 }
 
+.landingBrand {
+  margin: 0 0 6px 0;
+  font-size: clamp(36px, 8vw, 82px);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+  color: var(--text);
+  text-transform: uppercase;
+}
+
 .landingTag {
   margin: 0 0 10px 0;
   color: #c7ccff;
