@@ -263,4 +263,291 @@ This week highlighted the importance of sequencing architectural work before fea
 - Implement `GET /api/ai/history` with user-scoped records and selected-variant visibility.
 - Implement `GET /api/ai/analytics` with baseline metrics for generation and sentiment distribution.
 - Integrate memory-aware prompt augmentation into generation flow using persisted `BrandMemory`.
-- Expand testing evidence (integration/smoke) for dissertation results and viva preparation.
+
+# Week 11 - 01/03/2026 – 13/03/2026  
+
+---
+
+# Summary of Work
+
+This period focused on moving **MarketMind from a stable MVP toward a more entrepreneurial product workflow**. Development concentrated on strengthening the end-to-end application flow, improving generation usability, introducing deeper image controls, implementing analytics visualisation, and adding an early monetisation layer through a simulated credit and transaction system.
+
+---
+
+# Progress Made
+
+## Frontend & System Stability
+
+- Stabilized the **end-to-end frontend workflow**, ensuring smooth interaction across:
+  - Authentication
+  - Generation
+  - Content history
+  - Analytics dashboard
+
+- Completed **frontend–backend wiring** for:
+  - `login / register` with **JWT persistence**
+  - **text generation with explicit variant save flow**
+  - **ad copy generation with selectable image options**
+  - **history rendering**
+  - **analytics data visualisation**
+
+---
+
+## Generation UX Improvements
+
+To improve usability and clarity of the generation process:
+
+- Split the **Generate page** into two distinct sections:
+  - **Text Generation**
+  - **Ad Copy + Image Generation**
+
+- Introduced a **clear separation between choosing and saving text variants**, reducing accidental saves and giving users more control over which outputs are persisted.
+
+---
+
+## Ad Image Persistence
+
+Implemented persistent image association for generated advertisements:
+
+- The **selected ad image is now saved alongside the generated content**
+- Saved images are surfaced within:
+  - **Dashboard previews**
+  - **History view**
+
+This ensures visual outputs remain tied to the original generation context.
+
+---
+
+## Data Model & API Extensions
+
+Extended backend architecture to support richer data tracking.
+
+New additions include:
+
+- **Ad image selection fields** added to the persisted content model
+- A dedicated **ad-image selection endpoint**
+- A **restructured history API response** separating:
+  - text generation records
+  - ad copy generation records
+
+This improves data organisation and simplifies frontend rendering logic.
+
+---
+
+## Analytics Improvements
+
+The analytics module was upgraded to provide clearer insights.
+
+Enhancements include:
+
+- Tracking of **image creativity modes**:
+  - Safe
+  - Balanced
+  - Bold
+  - Experimental
+
+- Replacing raw numerical displays with **visual chart-based analytics**, improving interpretability for users.
+
+---
+
+## Advanced Image Controls
+
+Expanded image generation configuration with additional user controls.
+
+New inputs include:
+
+- **Style preset**
+- **Aspect ratio**
+- **Shot type**
+- **Include keywords**
+- **Avoid keywords**
+- **Colour palette**
+- **High-quality toggle**
+
+Supporting backend logic includes:
+
+- **Enum validation**
+- **Prompt mapping**
+- **Aspect ratio → dimension mapping**
+
+These controls allow users to guide visual outputs more precisely.
+
+---
+
+## Image Generation Reliability Improvements
+
+Several improvements were introduced to improve resilience when interacting with third-party AI image providers.
+
+Key additions:
+
+- **High-quality rendering adjustments** for sharper outputs
+- **Retry and fallback handling** for provider timeouts (e.g. 504 errors)
+- **Cleaner error responses** to surface partial generation failures more clearly to users
+
+---
+
+## Monetisation Mechanics (Business Layer)
+
+Implemented the foundations of a monetisation system.
+
+New components include:
+
+### Credits System
+
+- Each user receives a **credit balance**
+- Generations deduct credits based on usage
+
+### Simulated Plan Tiers
+
+Example subscription tiers introduced for testing:
+
+- Basic
+- Pro
+- Growth
+
+### Transaction Logging
+
+Added a **transaction log table** capturing:
+
+- credit purchases
+- credit usage
+- generation costs
+
+### Enforcement
+
+- Credit spending is **validated and enforced on generation routes**
+
+### Purchase Simulation
+
+Endpoints were implemented to simulate plan purchases during testing.
+
+### UI Integration
+
+Added:
+
+- **plans/credits interface**
+- **live credit balance display** within the application layout
+
+---
+
+# Reflection
+
+This development period significantly increased the **technical depth and product realism** of the MarketMind system beyond basic LLM integration.
+
+The system now demonstrates:
+
+- persistent **user feedback and selection tracking**
+- clearer **generation workflows with explicit save behaviour**
+- **visual analytics dashboards**
+- **advanced image generation parameters with validation**
+- **monetisation-aware backend mechanics** through credits and transaction logging
+
+A notable operational risk encountered during development was **third-party image provider instability**, particularly **504 gateway timeouts**. Addressing these issues required implementing **graceful degradation strategies**, including retry logic and fallback behaviour, which are essential considerations for production-grade AI systems.
+
+---
+
+# Next Steps
+
+The next development phase will focus on expanding MarketMind’s **business intelligence capabilities and brand-aware generation system**.
+
+Planned improvements include:
+
+## Business Profile System
+
+- Implement **business profile registration** from the dashboard
+- Each profile will include:
+  - business name
+  - vision statement
+  - brand values
+  - industry
+  - target audience
+
+---
+
+## Campaign Management
+
+Introduce campaign organisation under each business profile.
+
+Features will include:
+
+- campaign creation
+- grouping generated content by campaign
+- campaign-level evaluation and analytics
+
+---
+
+## Logo Generation
+
+- Integrate **logo generation per business profile**
+- Use the existing **image AI pipeline**
+- Surface generated logos on the dashboard
+- Optionally **composite logos into advertisement image prompts**
+
+---
+
+## Emotion Evaluation Upgrade (VAD Model)
+
+Upgrade the evaluation service from:
+
+**3-level tone classification → 7-level VAD scale**
+
+Outputs will include:
+
+- Valence
+- Arousal
+- Dominance
+
+Each generation will receive **numeric emotion scores** visible in the UI.
+
+---
+
+## Target Tone Controls
+
+Add **VAD target sliders** within an **Advanced Settings panel** on the Generate page.
+
+Users will be able to:
+
+- specify desired emotional tone
+- receive an **alignment score** comparing the generated content with the target emotion profile.
+
+---
+
+## Regeneration System
+
+Introduce a **guided regeneration workflow**.
+
+Users will be able to:
+
+- describe desired changes (e.g. "make it more persuasive")
+- use quick presets such as:
+  - more positive
+  - more formal
+  - shorter
+  - more energetic
+
+Revisions will be **linked to the original generation** to maintain traceability.
+
+---
+
+## Brand-Aware Prompting
+
+Use the **active business profile context** during generation.
+
+This will allow:
+
+- the same prompt to produce **different outputs depending on brand identity**
+- measurable **brand voice divergence between profiles**
+
+---
+
+## Expanded Analytics
+
+Enhance the analytics dashboard with:
+
+- **per-campaign performance metrics**
+- **brand voice tracking**
+- **VAD target alignment averages**
+
+This will provide deeper insights into how well generated content aligns with brand and emotional goals.
+
+---
