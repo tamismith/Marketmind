@@ -8,6 +8,7 @@ import DashboardHome from "./pages/DashboardHome.jsx";
 import Generate from "./pages/Generate.jsx";
 import History from "./pages/History.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import Plans from "./pages/Plans.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="generate" element={<Generate />} />
         <Route path="history" element={<History />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="plans" element={<Plans />} />
       </Route>
       
 

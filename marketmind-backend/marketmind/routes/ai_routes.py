@@ -1,4 +1,7 @@
+import logging
 from flask import Blueprint, request, jsonify
+
+logger = logging.getLogger(__name__)
 from ..controllers.ai_controller import (
     generate_ad_copy,
     generate_text_variants,
@@ -124,6 +127,7 @@ def ad_copy_endpoint():
         "ad_copy": result["ad_copy"],
         "image_base64": result["image_base64"],
         "image_options": result.get("image_options", []),
+        "image_warnings": result.get("image_warnings", []),
         "evaluation": result["evaluation"],
         "meta": {
             "platform": platform,
@@ -139,9 +143,12 @@ def ad_copy_endpoint():
     }), 200
 
     except ValueError as e:
-        return error_response("GENERATION_ERROR", str(e), 400)
+        msg = str(e)
+        if "Insufficient credits" in msg:
+            return error_response("INSUFFICIENT_CREDITS", msg, 402)
+        return error_response("GENERATION_ERROR", msg, 400)
     except Exception as e:
-        print("ERROR:", e)
+        logger.error("ERROR: %s", e)
         return error_response(
             "SERVER_ERROR",
             "Something went wrong while generating the ad",
@@ -217,7 +224,10 @@ def generate_text_endpoint():
         }), 200
 
     except ValueError as e:
-        return error_response("GENERATION_ERROR", str(e), 400)
+        msg = str(e)
+        if "Insufficient credits" in msg:
+            return error_response("INSUFFICIENT_CREDITS", msg, 402)
+        return error_response("GENERATION_ERROR", msg, 400)
     except Exception:
         return error_response(
             "SERVER_ERROR",

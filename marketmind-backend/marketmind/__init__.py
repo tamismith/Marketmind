@@ -18,7 +18,7 @@ def create_app():
         import marketmind.models
 
     # Allow React frontend to talk to this API
-    CORS(app)
+    CORS(app, origins=["http://localhost:5173", "http://localhost:3000"])
 
     @jwt.unauthorized_loader
     def _unauthorized_loader(reason):

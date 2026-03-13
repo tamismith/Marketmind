@@ -1,14 +1,25 @@
 import { Link, Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { clearToken } from "../api/client";
+import { clearToken, api } from "../api/client";
+import { useEffect, useState } from "react";
+
 export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [userInfo, setUserInfo] = useState(null);
+
   const topbarTitle = {
     "/app": "Dashboard",
     "/app/generate": "Generate",
     "/app/history": "History",
     "/app/analytics": "Analytics",
+    "/app/plans": "Plans & Credits",
   }[location.pathname] || "Dashboard";
+
+  useEffect(() => {
+    api.get("/auth/me")
+      .then((data) => setUserInfo(data))
+      .catch(() => setUserInfo(null));
+  }, [location.pathname]); // refresh on page change so deductions show up
 
   return (
     <div className="shell">
@@ -54,12 +65,25 @@ export default function DashboardLayout() {
           >
             Analytics
           </NavLink>
+
+          <NavLink
+            to="/app/plans"
+            className={({ isActive }) =>
+              isActive ? "navItem navItemActive" : "navItem"
+            }
+          >
+            Plans &amp; Credits
+          </NavLink>
         </nav>
 
         <div style={{ marginTop: "auto" }}>
           <div className="credits">
-            <span>Credits</span>
-            <span className="pill">38/50 left</span>
+            <span style={{ textTransform: "capitalize" }}>
+              {userInfo?.subscription_tier || "free"}
+            </span>
+            <span className="pill">
+              {userInfo !== null ? `${userInfo.credits} credits` : "..."}
+            </span>
           </div>
 
           <button
@@ -77,7 +101,9 @@ export default function DashboardLayout() {
       <main className="main">
         <div className="topbar">
           <h2 style={{ margin: 0 }}>{topbarTitle}</h2>
-          <span className="pill">38 credits</span>
+          <span className="pill">
+            {userInfo !== null ? `${userInfo.credits} credits` : "..."}
+          </span>
         </div>
 
         <div className="contentPanel">

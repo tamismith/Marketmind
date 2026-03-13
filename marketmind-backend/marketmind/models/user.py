@@ -9,8 +9,13 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    credits = db.Column(db.Integer, nullable=False, default=50)
+    subscription_tier = db.Column(db.String(20), nullable=False, default="free")
+
     generated_contents = db.relationship("GeneratedContent", backref="user", lazy=True)
     brand_memory = db.relationship("BrandMemory", backref="user", uselist=False)
+    credit_transactions = db.relationship("CreditTransaction", backref="user", lazy=True)
 
 
     def set_password(self, password: str) -> None:

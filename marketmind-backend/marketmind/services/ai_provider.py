@@ -81,8 +81,11 @@ class AIProvider:
             raise AIProviderError(f"Image generation request failed: {exc}") from exc
 
         if response.status_code != 200:
+            body_preview = (response.text or "").replace("\n", " ").strip()
+            if len(body_preview) > 240:
+                body_preview = body_preview[:240] + "..."
             raise AIProviderError(
-                f"Image generation failed: status={response.status_code}, body={response.text}"
+                f"Image generation failed: status={response.status_code}, body={body_preview}"
             )
 
         artifacts = response.json().get("artifacts", [])

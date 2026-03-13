@@ -5,6 +5,10 @@ from .ai_provider import (
     TextGenerationRequest,
 )
 import hashlib
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 
 ai_provider = AIProvider()
@@ -277,6 +281,17 @@ def _normalize_keywords(value) -> list[str]:
     text = str(value or "")
     return [part.strip() for part in text.split(",") if part.strip()]
 
+
+def _is_timeout_error(exc: Exception) -> bool:
+    text = str(exc).lower()
+    return "status=504" in text or "gateway time-out" in text or "gateway timeout" in text
+
+
+def _fallback_dimensions(width: int, height: int, scale: float = 0.75) -> tuple[int, int]:
+    fallback_w = max(512, int(width * scale))
+    fallback_h = max(512, int(height * scale))
+    return fallback_w, fallback_h
+
 def generate_marketing_text(
     business_name: str,
     industry: str,
@@ -433,7 +448,7 @@ Return only the ad copy text.
         )
         ad_copy = ai_provider.generate_text(text_request)
     except AIProviderError as e:
-        print("GPT ERROR:", e)
+        logger.error("GPT ERROR: %s", e)
         ad_copy = "Unable to generate ad copy at this time."
 
     
@@ -497,6 +512,10 @@ Strict constraints:
 - No distorted hands, faces, or anatomy.
 """
 
+    image_warnings = []
+
+    
+    # -------------------------
     for option in IMAGE_CREATIVITY_OPTIONS:
         option_prompt = f"""
 {base_image_prompt}
@@ -505,35 +524,54 @@ Creativity mode:
 - Option: {option["label"]} ({option["id"]})
 - {option["instruction"]}
 """
-        try:
-            image_request = ImageGenerationRequest(
-                prompt=option_prompt,
-                width=image_width,
-                height=image_height,
-                cfg_scale=8 if high_quality else 7,
-                steps=40 if high_quality else 30,
-            )
-            generated_image = ai_provider.generate_image_base64(image_request)
-            if generated_image:
-                image_options.append(
-                    {
-                        "id": option["id"],
-                        "label": option["label"],
-                        "creativity_level": option["id"],
-                        "image_base64": generated_image,
-                        "platform_alignment": platform_baseline["voice"],
-                    }
+
+        primary_cfg = 8 if high_quality else 7
+        primary_steps = 40 if high_quality else 30
+        fallback_w, fallback_h = _fallback_dimensions(image_width, image_height)
+
+        attempts = [
+            {"cfg_scale": primary_cfg, "steps": primary_steps, "width": image_width, "height": image_height},
+            {"cfg_scale": 7, "steps": 30, "width": image_width, "height": image_height},
+            {"cfg_scale": 7, "steps": 26, "width": fallback_w, "height": fallback_h},
+        ]
+
+        for attempt_index, attempt in enumerate(attempts):
+            try:
+                image_request = ImageGenerationRequest(
+                    prompt=option_prompt,
+                    width=attempt["width"],
+                    height=attempt["height"],
+                    cfg_scale=attempt["cfg_scale"],
+                    steps=attempt["steps"],
                 )
-        except AIProviderError as e:
-            print(f"STABILITY IMAGE ERROR ({option['id']}):", e)
+                generated_image = ai_provider.generate_image_base64(image_request)
+                if generated_image:
+                    image_options.append(
+                        {
+                            "id": option["id"],
+                            "label": option["label"],
+                            "creativity_level": option["id"],
+                            "image_base64": generated_image,
+                            "platform_alignment": platform_baseline["voice"],
+                        }
+                    )
+                break
+            except AIProviderError as e:
+                if attempt_index < len(attempts) - 1 and _is_timeout_error(e):
+                    time.sleep(0.35 * (attempt_index + 1))
+                    continue
+                image_warnings.append(
+                    f"{option['id']}: {str(e)}"
+                )
+                logger.error("STABILITY IMAGE ERROR (%s): %s", option['id'], e)
+                break
 
     if image_options:
         image_base64 = image_options[0]["image_base64"]
 
-    
-    # -------------------------
     return {
         "ad_copy": ad_copy,
         "image_base64": image_base64,
         "image_options": image_options,
+        "image_warnings": image_warnings,
     }

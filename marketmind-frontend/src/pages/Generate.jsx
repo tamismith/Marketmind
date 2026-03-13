@@ -166,6 +166,9 @@ export default function Generate() {
       setAdResult(data);
       const defaultId = data?.image_options?.[0]?.id || "";
       setSelectedAdImageId(defaultId);
+      if ((!data?.image_options || data.image_options.length === 0) && data?.image_warnings?.length) {
+        setAdErrorMessage("Image provider timed out. Ad copy was generated, but image options are temporarily unavailable. Please retry.");
+      }
     } catch (error) {
       setAdErrorMessage(error.message || "Failed to generate ad copy.");
     } finally {

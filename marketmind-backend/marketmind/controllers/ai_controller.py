@@ -5,7 +5,40 @@ from ..services.evaluation_service import evaluate_text
 from ..services.feedback_service import update_brand_memory_from_selection
 from flask_jwt_extended import get_jwt_identity
 from ..models.generated_content import GeneratedContent
+from ..models.user import User
+from ..models.credit_transaction import CreditTransaction
 from marketmind.extensions import db
+
+# Credit cost per action
+CREDIT_COST = {
+    "text_ab": 2,
+    "ad_copy": 5,
+    "regenerate": 1,
+}
+
+
+def _check_and_deduct_credits(user_id: int, cost: int, description: str) -> None:
+    """
+    Raises ValueError if the user has insufficient credits.
+    Otherwise deducts and logs the transaction.
+    Must be called inside a DB session committed by the caller.
+    """
+    user = User.query.get(user_id)
+    if not user:
+        raise LookupError("User not found")
+    if user.credits < cost:
+        raise ValueError(
+            f"Insufficient credits. This action costs {cost} credit(s); "
+            f"you have {user.credits}."
+        )
+    user.credits -= cost
+    tx = CreditTransaction(
+        user_id=user_id,
+        amount=-cost,
+        transaction_type="deduction",
+        description=description,
+    )
+    db.session.add(tx)
 
 def generate_caption(
     business_name: str,
@@ -144,6 +177,8 @@ Include keywords: {include_keywords}
 Avoid keywords: {avoid_keywords}
 """
 
+    _check_and_deduct_credits(user_id, CREDIT_COST["ad_copy"], "Ad copy + image generation")
+
     content = GeneratedContent(
         user_id=user_id,
         content_type="ad_copy",
@@ -246,6 +281,8 @@ Goal: {goal}
 Length: {length}
 Region: {region}
 """
+
+    _check_and_deduct_credits(user_id, CREDIT_COST["text_ab"], "Text A/B generation")
 
     content = GeneratedContent(
         user_id=user_id,
