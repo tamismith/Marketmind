@@ -444,7 +444,7 @@ def get_user_analytics() -> dict:
     # 1) Best Brand Voice (most common selected tone)
     tone_counts = {"positive": 0, "neutral": 0, "negative": 0}
     for row in selected_rows:
-        tone = (selected_eval(row).get("tone") or "neutral").lower()
+        tone = (selected_eval(row).get("tone_category") or "neutral").lower()
         if tone not in tone_counts:
             tone = "neutral"
         tone_counts[tone] += 1
@@ -499,7 +499,7 @@ def get_user_analytics() -> dict:
                 "selected_count": 0,
             },
         )
-        tone = (selected_eval(row).get("tone") or "neutral").lower()
+        tone = (selected_eval(row).get("tone_category") or "neutral").lower()
         if tone not in {"positive", "neutral", "negative"}:
             tone = "neutral"
         week_entry[tone] += 1
