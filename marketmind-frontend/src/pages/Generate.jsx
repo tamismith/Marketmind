@@ -35,28 +35,152 @@ const initialAdForm = {
   avoid_keywords: "",
 };
 
+function ScoreBar({ value, min = 0, max = 1, color = "#0ea5a3" }) {
+  const pct = Math.round(((value - min) / (max - min)) * 100);
+  return (
+    <div style={{ background: "#1a2436", borderRadius: 4, height: 6, overflow: "hidden", marginTop: 4 }}>
+      <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 4, transition: "width 0.4s ease" }} />
+    </div>
+  );
+}
+
 function EvalBlock({ evaluation }) {
   if (!evaluation) return null;
-  const explanation = evaluation.explanation;
+  const { tone_label, tone, vad, explanation } = evaluation;
+  const displayTone = tone_label || tone;
 
   return (
     <div className="evalBlock">
-      <div>
-        <strong className="evalTitle">Overall feel:</strong> {evaluation.tone}
+
+      {/* Tone / Valence */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <strong className="evalTitle">Overall feel</strong>
+          <span className="muted" style={{ fontSize: 12 }}>{displayTone}</span>
+        </div>
+        {vad ? <ScoreBar value={vad.valence} min={-1} max={1} color="#0ea5a3" /> : null}
+        {explanation?.tone_summary ? (
+          <p className="muted" style={{ fontSize: 12, marginTop: 5 }}>{explanation.tone_summary}</p>
+        ) : null}
       </div>
-      {typeof explanation === "string" && explanation ? (
-        <div>
-          <strong className="evalTitle">Why:</strong> {explanation}
+
+      {/* Energy / Arousal */}
+      {vad ? (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <strong className="evalTitle">Energy</strong>
+            <span className="muted" style={{ fontSize: 12 }}>{vad.arousal_label}</span>
+          </div>
+          <ScoreBar value={vad.arousal} min={0} max={1} color="#f59e0b" />
+          {explanation?.energy_summary ? (
+            <p className="muted" style={{ fontSize: 12, marginTop: 5 }}>{explanation.energy_summary}</p>
+          ) : null}
         </div>
       ) : null}
-      {explanation && typeof explanation === "object" ? (
+
+      {/* Voice / Dominance */}
+      {vad ? (
         <div>
-          <strong className="evalTitle">Why:</strong>
-          {explanation.tone_summary ? <div>Tone: {explanation.tone_summary}</div> : null}
-          {explanation.voice_summary ? <div>Voice: {explanation.voice_summary}</div> : null}
-          {explanation.energy_summary ? <div>Energy: {explanation.energy_summary}</div> : null}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <strong className="evalTitle">Voice</strong>
+            <span className="muted" style={{ fontSize: 12 }}>{vad.dominance_label}</span>
+          </div>
+          <ScoreBar value={vad.dominance} min={0} max={1} color="#8b5cf6" />
+          {explanation?.voice_summary ? (
+            <p className="muted" style={{ fontSize: 12, marginTop: 5 }}>{explanation.voice_summary}</p>
+          ) : null}
         </div>
       ) : null}
+
+    </div>
+  );
+}
+
+function EvalComparison({ evalA, evalB }) {
+  if (!evalA || !evalB) return null;
+
+  const THRESHOLD = 0.05;
+
+  function compareRow(label, valA, valB, labelA, labelB) {
+    const diff = valA - valB;
+    let verdict;
+    if (Math.abs(diff) < THRESHOLD) {
+      verdict = "Similar";
+    } else if (diff > 0) {
+      verdict = "A scores higher";
+    } else {
+      verdict = "B scores higher";
+    }
+    return { label, labelA, labelB, verdict, valA, valB };
+  }
+
+  const rows = [
+    compareRow(
+      "Overall feel",
+      evalA.score ?? 0,
+      evalB.score ?? 0,
+      evalA.tone_label || evalA.tone || "—",
+      evalB.tone_label || evalB.tone || "—",
+    ),
+    compareRow(
+      "Energy",
+      evalA.vad?.arousal ?? 0,
+      evalB.vad?.arousal ?? 0,
+      evalA.vad?.arousal_label || "—",
+      evalB.vad?.arousal_label || "—",
+    ),
+    compareRow(
+      "Voice",
+      evalA.vad?.dominance ?? 0,
+      evalB.vad?.dominance ?? 0,
+      evalA.vad?.dominance_label || "—",
+      evalB.vad?.dominance_label || "—",
+    ),
+  ];
+
+  const allSimilar = rows.every((r) => r.verdict === "Similar");
+
+  return (
+    <div className="sectionCard">
+      <h4 style={{ marginTop: 0, marginBottom: 12 }}>A vs B Comparison</h4>
+      {allSimilar ? (
+        <p className="muted" style={{ fontSize: 13 }}>
+          Both variants score similarly across all dimensions.
+        </p>
+      ) : (
+        <div style={{ display: "grid", gap: 10 }}>
+          {rows.map(({ label, labelA, labelB, verdict, valA, valB }) => (
+            <div
+              key={label}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "110px 1fr 1fr 1fr",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <strong className="evalTitle" style={{ fontSize: 12 }}>{label}</strong>
+              <span className="muted" style={{ fontSize: 12 }}>
+                A: {labelA}{" "}
+                <span style={{ color: "#6b7280", fontSize: 11 }}>({valA.toFixed(2)})</span>
+              </span>
+              <span className="muted" style={{ fontSize: 12 }}>
+                B: {labelB}{" "}
+                <span style={{ color: "#6b7280", fontSize: 11 }}>({valB.toFixed(2)})</span>
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: verdict === "Similar" ? "#6b7280" : "#0ea5a3",
+                  fontWeight: verdict !== "Similar" ? 600 : 400,
+                }}
+              >
+                {verdict === "Similar" ? "— Similar" : `→ ${verdict}`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -328,6 +452,10 @@ export default function Generate() {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {activeMode === "text" && result ? (
+        <EvalComparison evalA={result.evaluation_a} evalB={result.evaluation_b} />
       ) : null}
 
       {activeMode === "text" && result ? (
