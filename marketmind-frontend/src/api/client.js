@@ -3,7 +3,7 @@
 // - Stores/reads JWT token in localStorage
 // - Adds Authorization header automatically
 // - Normalizes backend errors into one predictable Error object
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5001";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const TOKEN_KEY = "mm_token";
 
 export function getToken() {

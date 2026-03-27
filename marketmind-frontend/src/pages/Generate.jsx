@@ -203,6 +203,8 @@ export default function Generate() {
   const [adErrorMessage, setAdErrorMessage] = useState("");
   const [adSuccessMessage, setAdSuccessMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [showTextAdvanced, setShowTextAdvanced] = useState(false);
+  const [showAdAdvanced, setShowAdAdvanced] = useState(false);
 
   const loadMemoryPreview = async () => {
     try {
@@ -347,18 +349,35 @@ export default function Generate() {
       {activeMode === "text" ? (
         <div className="sectionCard">
           <form className="form" onSubmit={onGenerate}>
+            {/* Required fields */}
             <input className="input" name="business_name" placeholder="Business name" value={form.business_name} onChange={onChange} required />
             <input className="input" name="industry" placeholder="Industry" value={form.industry} onChange={onChange} required />
             <input className="input" name="target_audience" placeholder="Target audience" value={form.target_audience} onChange={onChange} required />
             <input className="input" name="description" placeholder="Description" value={form.description} onChange={onChange} required />
-            <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
 
             <div className="formGrid4">
               <input className="input" name="tone" placeholder="Tone" value={form.tone} onChange={onChange} required />
               <input className="input" name="platform" placeholder="Platform" value={form.platform} onChange={onChange} required />
-              <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
-              <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
             </div>
+
+            {/* Advanced toggle */}
+            <button
+              type="button"
+              className="btnGhost btnInline"
+              style={{ fontSize: 13, marginTop: 4 }}
+              onClick={() => setShowTextAdvanced((prev) => !prev)}
+            >
+              {showTextAdvanced ? "Advanced Settings ▴" : "Advanced Settings ▾"}
+            </button>
+
+            {/* Advanced fields */}
+            {showTextAdvanced ? (
+              <div className="formGrid4" style={{ marginTop: 8 }}>
+                <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
+                <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
+                <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
+              </div>
+            ) : null}
 
             <button className="btn" type="submit" disabled={isGenerating}>
               {isGenerating ? "Generating..." : "Generate A/B Variants"}
@@ -491,76 +510,72 @@ export default function Generate() {
           </p>
 
           <form className="form" onSubmit={onGenerateAdCopy}>
+            {/* Required fields */}
             <input className="input" name="business_name" placeholder="Business name" value={adForm.business_name} onChange={onAdChange} required />
             <input className="input" name="industry" placeholder="Industry" value={adForm.industry} onChange={onAdChange} required />
             <input className="input" name="target_audience" placeholder="Target audience" value={adForm.target_audience} onChange={onAdChange} required />
             <input className="input" name="description" placeholder="Description" value={adForm.description} onChange={onAdChange} required />
-            <input className="input" name="goal" placeholder="Goal (optional)" value={adForm.goal} onChange={onAdChange} />
 
             <div className="formGrid4">
               <input className="input" name="tone" placeholder="Tone" value={adForm.tone} onChange={onAdChange} required />
               <input className="input" name="platform" placeholder="Platform" value={adForm.platform} onChange={onAdChange} required />
-              <input className="input" name="length" placeholder="Length" value={adForm.length} onChange={onAdChange} />
-              <input className="input" name="region" placeholder="Region" value={adForm.region} onChange={onAdChange} />
             </div>
 
-            <div className="gridCols2">
-              <input className="input" name="offer" placeholder="Offer (optional)" value={adForm.offer} onChange={onAdChange} />
-              <input className="input" name="cta" placeholder="CTA (optional)" value={adForm.cta} onChange={onAdChange} />
-            </div>
+            {/* Advanced toggle */}
+            <button
+              type="button"
+              className="btnGhost btnInline"
+              style={{ fontSize: 13, marginTop: 4 }}
+              onClick={() => setShowAdAdvanced((prev) => !prev)}
+            >
+              {showAdAdvanced ? "Advanced Settings ▴" : "Advanced Settings ▾"}
+            </button>
 
-            <div className="formGrid4">
-              <select className="input" name="style_preset" value={adForm.style_preset} onChange={onAdChange}>
-                <option value="realistic">Style: Realistic</option>
-                <option value="bold">Style: Bold</option>
-                <option value="minimal">Style: Minimal</option>
-                <option value="warm">Style: Warm</option>
-              </select>
-              <select className="input" name="aspect_ratio" value={adForm.aspect_ratio} onChange={onAdChange}>
-                <option value="1:1">Aspect: 1:1</option>
-                <option value="4:5">Aspect: 4:5</option>
-                <option value="16:9">Aspect: 16:9</option>
-              </select>
-              <select className="input" name="shot_type" value={adForm.shot_type} onChange={onAdChange}>
-                <option value="close_up">Shot: Close-up</option>
-                <option value="medium">Shot: Medium</option>
-                <option value="wide">Shot: Wide</option>
-              </select>
-              <input
-                className="input"
-                name="color_palette"
-                placeholder="Palette (earthy, pastel, vibrant...)"
-                value={adForm.color_palette}
-                onChange={onAdChange}
-              />
-            </div>
+            {/* Advanced fields */}
+            {showAdAdvanced ? (
+              <>
+                <div className="formGrid4" style={{ marginTop: 8 }}>
+                  <input className="input" name="goal" placeholder="Goal (optional)" value={adForm.goal} onChange={onAdChange} />
+                  <input className="input" name="length" placeholder="Length" value={adForm.length} onChange={onAdChange} />
+                  <input className="input" name="region" placeholder="Region" value={adForm.region} onChange={onAdChange} />
+                </div>
 
-            <div className="gridCols2">
-              <input
-                className="input"
-                name="include_keywords"
-                placeholder="Include keywords (comma-separated)"
-                value={adForm.include_keywords}
-                onChange={onAdChange}
-              />
-              <input
-                className="input"
-                name="avoid_keywords"
-                placeholder="Avoid keywords (comma-separated)"
-                value={adForm.avoid_keywords}
-                onChange={onAdChange}
-              />
-            </div>
+                <div className="gridCols2">
+                  <input className="input" name="offer" placeholder="Offer (optional)" value={adForm.offer} onChange={onAdChange} />
+                  <input className="input" name="cta" placeholder="CTA (optional)" value={adForm.cta} onChange={onAdChange} />
+                </div>
 
-            <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <input
-                type="checkbox"
-                name="high_quality"
-                checked={adForm.high_quality}
-                onChange={onAdChange}
-              />
-              High quality image mode (sharper, slower)
-            </label>
+                <div className="formGrid4">
+                  <select className="input" name="style_preset" value={adForm.style_preset} onChange={onAdChange}>
+                    <option value="realistic">Style: Realistic</option>
+                    <option value="bold">Style: Bold</option>
+                    <option value="minimal">Style: Minimal</option>
+                    <option value="warm">Style: Warm</option>
+                  </select>
+                  <select className="input" name="aspect_ratio" value={adForm.aspect_ratio} onChange={onAdChange}>
+                    <option value="1:1">Aspect: 1:1</option>
+                    <option value="4:5">Aspect: 4:5</option>
+                    <option value="16:9">Aspect: 16:9</option>
+                  </select>
+                  <select className="input" name="shot_type" value={adForm.shot_type} onChange={onAdChange}>
+                    <option value="close_up">Shot: Close-up</option>
+                    <option value="medium">Shot: Medium</option>
+                    <option value="wide">Shot: Wide</option>
+                  </select>
+                  <input className="input" name="color_palette" placeholder="Palette (earthy, pastel, vibrant...)" value={adForm.color_palette} onChange={onAdChange} />
+                </div>
+
+                <div className="gridCols2">
+                  <input className="input" name="include_keywords" placeholder="Include keywords (comma-separated)" value={adForm.include_keywords} onChange={onAdChange} />
+                  <input className="input" name="avoid_keywords" placeholder="Avoid keywords (comma-separated)" value={adForm.avoid_keywords} onChange={onAdChange} />
+                </div>
+
+                <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input type="checkbox" name="high_quality" checked={adForm.high_quality} onChange={onAdChange} />
+                  High quality image mode (sharper, slower)
+                </label>
+              </>
+            ) : null}
 
             <button className="btn" type="submit" disabled={isAdGenerating}>
               {isAdGenerating ? "Generating ad..." : "Generate Ad Copy"}
