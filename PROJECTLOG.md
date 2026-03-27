@@ -393,3 +393,48 @@ considerations for production-grade AI systems.
 #### Expanded Analytics
 - Add **per-campaign performance metrics**, **brand voice tracking**, and
   **VAD target alignment averages** to the analytics dashboard.
+
+## Week 12 — 13/03/26–27/03/26
+
+### Summary of Work
+This period focused on significantly upgrading the evaluation layer of MarketMind, moving from a basic 3-level tone classification toward a richer VAD (Valence, Arousal, Dominance) model with granular scoring. Alongside the backend improvements, the frontend evaluation display was redesigned to surface these scores meaningfully to the user, and the Generate page was restructured to reduce form complexity.
+
+---
+
+### Progress Made
+
+#### VAD Evaluation Upgrade (Backend)
+- Expanded tone classification from **3 levels to 7 levels**: Very Positive, Positive, Slightly Positive, Neutral, Slightly Negative, Negative, Very Negative.
+- Expanded arousal and dominance classification from 3 to **5 levels** each.
+- Extended intensifier, assertive, and hedge word lists to improve scoring sensitivity across all three VAD dimensions.
+- Added `tone_label`, `tone_category`, `arousal_label`, and `dominance_label` to the evaluation response.
+- Retained `tone_category` as a backward-compatible 3-way field so existing analytics charts remain unaffected.
+- Added human-readable `explanation` descriptions for all tone, energy, and voice levels.
+
+#### Evaluation UI (Frontend)
+- Redesigned the `EvalBlock` component to display granular labels (e.g. "Very Positive", "High", "Assertive") instead of raw programmatic keys.
+- Introduced a `ScoreBar` component with colour-coded progress bars — teal for valence, amber for energy, purple for voice — filled based on numeric scores.
+- Added an **A vs B Comparison** panel below generated variants showing side-by-side labels and numeric scores per dimension with a plain English verdict (e.g. "→ B scores higher").
+- Comparison uses a 0.05 threshold to avoid flagging negligible differences as meaningful.
+- Graceful fallback for older records that do not contain the new VAD fields.
+
+#### Generate Page UX (Frontend)
+- Refactored both the text and ad copy forms into **required** and **advanced** sections.
+- Required fields (business name, industry, target audience, description, tone, platform) are always visible.
+- Optional and advanced fields hidden behind a collapsible **Advanced Settings ▾** toggle per form.
+- Text advanced section: goal, length, region.
+- Ad copy advanced section: goal, length, region, offer, CTA, colour palette, style preset, aspect ratio, shot type, keywords, high quality toggle.
+
+---
+
+### Reflection
+Upgrading the evaluation layer added meaningful technical depth to the system. The shift from a 3-level label to a 7-level tone scale with numeric VAD scores makes the evaluation genuinely useful rather than decorative, and directly supports the dissertation objective around output evaluation. The A vs B comparison panel addresses a real usability gap — previously both variants could return near-identical looking scores even when the generated text differed significantly in style.
+
+Refactoring the Generate forms improved the experience for first-time users considerably. The ad copy form previously presented 14 fields at once, which was overwhelming. Collapsing these behind a toggle aligns better with the SME user persona central to this project.
+
+---
+
+### Next Steps
+- Implement VAD target sliders so users can specify a desired emotional tone and receive an alignment score.
+- Build the Regenerate endpoint to allow guided revision of existing outputs.
+- Implement the BusinessProfile and Campaign database models as the foundation for brand-aware generation and campaign analytics.
