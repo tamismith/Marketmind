@@ -13,6 +13,7 @@ export default function DashboardLayout() {
     "/app/history": "History",
     "/app/analytics": "Analytics",
     "/app/plans": "Plans & Credits",
+    "/app/brand": "Brand Profile",
   }[location.pathname] || "Dashboard";
 
   useEffect(() => {
@@ -73,6 +74,15 @@ export default function DashboardLayout() {
             }
           >
             Plans &amp; Credits
+          </NavLink>
+
+          <NavLink
+            to="/app/brand"
+            className={({ isActive }) =>
+              isActive ? "navItem navItemActive" : "navItem"
+            }
+          >
+            Brand Profile
           </NavLink>
         </nav>
 

@@ -60,4 +60,7 @@ export const api = {
   post(path, body, options = {}) {
     return request(path, { ...options, method: "POST", body });
   },
+  put(path, body, options = {}) {
+    return request(path, { ...options, method: "PUT", body });
+  },
 };

@@ -1,11 +1,8 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../api/client";
 
 const initialForm = {
-  business_name: "",
-  industry: "",
-  target_audience: "",
   tone: "",
   platform: "",
   description: "",
@@ -15,9 +12,6 @@ const initialForm = {
 };
 
 const initialAdForm = {
-  business_name: "",
-  industry: "",
-  target_audience: "",
   tone: "",
   platform: "",
   description: "",
@@ -250,6 +244,8 @@ export default function Generate() {
   const [adVadTargets, setAdVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRegeneratingAd, setIsRegeneratingAd] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const loadMemoryPreview = async () => {
     try {
@@ -274,6 +270,10 @@ export default function Generate() {
 
   useEffect(() => {
     loadMemoryPreview();
+    api.get("/api/business/profile")
+      .then((data) => setProfile(data))
+      .catch(() => setProfile(null))
+      .finally(() => setProfileLoading(false));
   }, []);
 
   const onChange = (e) => {
@@ -295,6 +295,10 @@ export default function Generate() {
     try {
       const payload = {
         ...form,
+        business_name: profile?.business_name || "",
+        industry: profile?.industry || "",
+        target_audience: profile?.target_audience || "",
+        region: form.region || profile?.region || "",
         ...(vadEnabled ? {
           target_valence: vadTargets.valence,
           target_arousal: vadTargets.arousal,
@@ -343,6 +347,10 @@ export default function Generate() {
     try {
       const payload = {
         ...adForm,
+        business_name: profile?.business_name || "",
+        industry: profile?.industry || "",
+        target_audience: profile?.target_audience || "",
+        region: adForm.region || profile?.region || "",
         ...(adVadEnabled ? {
           target_valence: adVadTargets.valence,
           target_arousal: adVadTargets.arousal,
@@ -423,6 +431,33 @@ export default function Generate() {
         <h3 className="pageTitle">Generate Marketing Text</h3>
       </div>
 
+      {!profileLoading && (
+        <div className="sectionCard">
+          {profile?.business_name && profile?.industry && profile?.target_audience && profile?.region ? (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="muted" style={{ fontSize: 13 }}>
+                <strong className="evalTitle">{profile.business_name}</strong>
+                {" · "}{profile.industry}
+                {" · "}{profile.target_audience}
+                {" · "}{profile.region}
+              </span>
+              <Link to="/app/brand" className="link" style={{ fontSize: 13, whiteSpace: "nowrap", marginLeft: 12 }}>
+                Edit Profile →
+              </Link>
+            </div>
+          ) : (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="muted" style={{ fontSize: 13 }}>
+                Complete your brand profile to speed up generation
+              </span>
+              <Link to="/app/brand" className="link" style={{ fontSize: 13, whiteSpace: "nowrap", marginLeft: 12 }}>
+                Set up Brand Profile →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="actionRow">
         <button
           className={activeMode === "text" ? "btn btnInline" : "btnGhost btnInline"}
@@ -442,9 +477,6 @@ export default function Generate() {
         <div className="sectionCard">
           <form className="form" onSubmit={onGenerate}>
             {/* Required fields */}
-            <input className="input" name="business_name" placeholder="Business name" value={form.business_name} onChange={onChange} required />
-            <input className="input" name="industry" placeholder="Industry" value={form.industry} onChange={onChange} required />
-            <input className="input" name="target_audience" placeholder="Target audience" value={form.target_audience} onChange={onChange} required />
             <input className="input" name="description" placeholder="Description" value={form.description} onChange={onChange} required />
 
             <div className="formGrid4">
@@ -649,9 +681,6 @@ export default function Generate() {
 
           <form className="form" onSubmit={onGenerateAdCopy}>
             {/* Required fields */}
-            <input className="input" name="business_name" placeholder="Business name" value={adForm.business_name} onChange={onAdChange} required />
-            <input className="input" name="industry" placeholder="Industry" value={adForm.industry} onChange={onAdChange} required />
-            <input className="input" name="target_audience" placeholder="Target audience" value={adForm.target_audience} onChange={onAdChange} required />
             <input className="input" name="description" placeholder="Description" value={adForm.description} onChange={onAdChange} required />
 
             <div className="formGrid4">
