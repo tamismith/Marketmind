@@ -46,7 +46,7 @@ function ScoreBar({ value, min = 0, max = 1, color = "#0ea5a3" }) {
 
 function EvalBlock({ evaluation }) {
   if (!evaluation) return null;
-  const { tone_label, tone, vad, explanation } = evaluation;
+  const { tone_label, tone, vad, explanation, vad_alignment } = evaluation;
   const displayTone = tone_label || tone;
 
   return (
@@ -88,6 +88,45 @@ function EvalBlock({ evaluation }) {
           <ScoreBar value={vad.dominance} min={0} max={1} color="#8b5cf6" />
           {explanation?.voice_summary ? (
             <p className="muted" style={{ fontSize: 12, marginTop: 5 }}>{explanation.voice_summary}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Target Alignment */}
+      {vad_alignment?.overall != null ? (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #1e2d45" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <strong className="evalTitle">Target Alignment</strong>
+            <span style={{ color: "#0ea5a3", fontWeight: 600, fontSize: 13 }}>
+              {Math.round(vad_alignment.overall * 100)}%
+            </span>
+          </div>
+          {vad_alignment.valence != null ? (
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="muted" style={{ fontSize: 12 }}>Feel</span>
+                <span className="muted" style={{ fontSize: 12 }}>{Math.round(vad_alignment.valence * 100)}%</span>
+              </div>
+              <ScoreBar value={vad_alignment.valence} min={0} max={1} color="#0ea5a3" />
+            </div>
+          ) : null}
+          {vad_alignment.arousal != null ? (
+            <div style={{ marginBottom: 4 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="muted" style={{ fontSize: 12 }}>Energy</span>
+                <span className="muted" style={{ fontSize: 12 }}>{Math.round(vad_alignment.arousal * 100)}%</span>
+              </div>
+              <ScoreBar value={vad_alignment.arousal} min={0} max={1} color="#f59e0b" />
+            </div>
+          ) : null}
+          {vad_alignment.dominance != null ? (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span className="muted" style={{ fontSize: 12 }}>Voice</span>
+                <span className="muted" style={{ fontSize: 12 }}>{Math.round(vad_alignment.dominance * 100)}%</span>
+              </div>
+              <ScoreBar value={vad_alignment.dominance} min={0} max={1} color="#8b5cf6" />
+            </div>
           ) : null}
         </div>
       ) : null}
@@ -205,6 +244,10 @@ export default function Generate() {
   const [successMessage, setSuccessMessage] = useState("");
   const [showTextAdvanced, setShowTextAdvanced] = useState(false);
   const [showAdAdvanced, setShowAdAdvanced] = useState(false);
+  const [vadEnabled, setVadEnabled] = useState(false);
+  const [vadTargets, setVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
+  const [adVadEnabled, setAdVadEnabled] = useState(false);
+  const [adVadTargets, setAdVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
 
   const loadMemoryPreview = async () => {
     try {
@@ -248,7 +291,15 @@ export default function Generate() {
     setIsGenerating(true);
 
     try {
-      const data = await api.post("/api/ai/generate/text", form);
+      const payload = {
+        ...form,
+        ...(vadEnabled ? {
+          target_valence: vadTargets.valence,
+          target_arousal: vadTargets.arousal,
+          target_dominance: vadTargets.dominance,
+        } : {}),
+      };
+      const data = await api.post("/api/ai/generate/text", payload);
       setResult(data);
       setPendingTextSelection("");
     } catch (error) {
@@ -288,7 +339,15 @@ export default function Generate() {
     setIsAdGenerating(true);
 
     try {
-      const data = await api.post("/api/ai/ad-copy", adForm);
+      const payload = {
+        ...adForm,
+        ...(adVadEnabled ? {
+          target_valence: adVadTargets.valence,
+          target_arousal: adVadTargets.arousal,
+          target_dominance: adVadTargets.dominance,
+        } : {}),
+      };
+      const data = await api.post("/api/ai/ad-copy", payload);
       setAdResult(data);
       const defaultId = data?.image_options?.[0]?.id || "";
       setSelectedAdImageId(defaultId);
@@ -372,11 +431,50 @@ export default function Generate() {
 
             {/* Advanced fields */}
             {showTextAdvanced ? (
-              <div className="formGrid4" style={{ marginTop: 8 }}>
-                <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
-                <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
-                <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
-              </div>
+              <>
+                <div className="formGrid4" style={{ marginTop: 8 }}>
+                  <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
+                  <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
+                  <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
+                    <input type="checkbox" checked={vadEnabled} onChange={(e) => setVadEnabled(e.target.checked)} />
+                    Target emotional profile
+                  </label>
+                  {vadEnabled ? (
+                    <div style={{ display: "grid", gap: 10, paddingLeft: 4 }}>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="muted" style={{ fontSize: 12 }}>Overall Feel (Valence)</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{vadTargets.valence.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min={-1} max={1} step={0.05} value={vadTargets.valence}
+                          onChange={(e) => setVadTargets((prev) => ({ ...prev, valence: parseFloat(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#0ea5a3" }} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="muted" style={{ fontSize: 12 }}>Energy (Arousal)</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{vadTargets.arousal.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min={0} max={1} step={0.05} value={vadTargets.arousal}
+                          onChange={(e) => setVadTargets((prev) => ({ ...prev, arousal: parseFloat(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#f59e0b" }} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="muted" style={{ fontSize: 12 }}>Voice (Dominance)</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{vadTargets.dominance.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min={0} max={1} step={0.05} value={vadTargets.dominance}
+                          onChange={(e) => setVadTargets((prev) => ({ ...prev, dominance: parseFloat(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#8b5cf6" }} />
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </>
             ) : null}
 
             <button className="btn" type="submit" disabled={isGenerating}>
@@ -574,6 +672,43 @@ export default function Generate() {
                   <input type="checkbox" name="high_quality" checked={adForm.high_quality} onChange={onAdChange} />
                   High quality image mode (sharper, slower)
                 </label>
+                <div style={{ marginTop: 12 }}>
+                  <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
+                    <input type="checkbox" checked={adVadEnabled} onChange={(e) => setAdVadEnabled(e.target.checked)} />
+                    Target emotional profile
+                  </label>
+                  {adVadEnabled ? (
+                    <div style={{ display: "grid", gap: 10, paddingLeft: 4 }}>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="muted" style={{ fontSize: 12 }}>Overall Feel (Valence)</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{adVadTargets.valence.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min={-1} max={1} step={0.05} value={adVadTargets.valence}
+                          onChange={(e) => setAdVadTargets((prev) => ({ ...prev, valence: parseFloat(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#0ea5a3" }} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="muted" style={{ fontSize: 12 }}>Energy (Arousal)</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{adVadTargets.arousal.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min={0} max={1} step={0.05} value={adVadTargets.arousal}
+                          onChange={(e) => setAdVadTargets((prev) => ({ ...prev, arousal: parseFloat(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#f59e0b" }} />
+                      </div>
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span className="muted" style={{ fontSize: 12 }}>Voice (Dominance)</span>
+                          <span className="muted" style={{ fontSize: 12 }}>{adVadTargets.dominance.toFixed(2)}</span>
+                        </div>
+                        <input type="range" min={0} max={1} step={0.05} value={adVadTargets.dominance}
+                          onChange={(e) => setAdVadTargets((prev) => ({ ...prev, dominance: parseFloat(e.target.value) }))}
+                          style={{ width: "100%", accentColor: "#8b5cf6" }} />
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
               </>
             ) : null}
 

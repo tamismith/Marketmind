@@ -144,6 +144,42 @@ def _describe_dominance(dominance_key: str) -> str:
     return descriptions.get(dominance_key, "Moderately confident, balanced voice.")
 
 
+def _calculate_alignment(
+    evaluation: dict,
+    target_valence: float | None = None,
+    target_arousal: float | None = None,
+    target_dominance: float | None = None,
+) -> dict:
+    """
+    Compare actual VAD scores against optional slider targets.
+    Returns per-dimension alignment in [0, 1] (1 = perfect match).
+
+    Expected ranges:
+      target_valence:   [-1, 1]
+      target_arousal:   [0, 1]
+      target_dominance: [0, 1]
+    """
+    vad = evaluation.get("vad", {})
+    scores: dict[str, float] = {}
+
+    if target_valence is not None:
+        actual = vad.get("valence", 0.0)
+        scores["valence"] = round(_clamp(1.0 - abs(actual - target_valence) / 2.0, 0.0, 1.0), 4)
+
+    if target_arousal is not None:
+        actual = vad.get("arousal", 0.0)
+        scores["arousal"] = round(_clamp(1.0 - abs(actual - target_arousal), 0.0, 1.0), 4)
+
+    if target_dominance is not None:
+        actual = vad.get("dominance", 0.5)
+        scores["dominance"] = round(_clamp(1.0 - abs(actual - target_dominance), 0.0, 1.0), 4)
+
+    if scores:
+        scores["overall"] = round(sum(scores.values()) / len(scores), 4)
+
+    return scores
+
+
 def evaluate_text(text: str) -> dict:
     if not text or not text.strip():
         return {

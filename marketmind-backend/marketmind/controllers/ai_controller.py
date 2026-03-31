@@ -1,13 +1,62 @@
 from datetime import date
 
 from ..services.ai_service import generate_marketing_text, generate_ad_text
-from ..services.evaluation_service import evaluate_text
+from ..services.evaluation_service import evaluate_text, _calculate_alignment
 from ..services.feedback_service import update_brand_memory_from_selection
 from flask_jwt_extended import get_jwt_identity
 from ..models.generated_content import GeneratedContent
 from ..models.user import User
 from ..models.credit_transaction import CreditTransaction
 from marketmind.extensions import db
+
+def _vad_prompt_instruction(
+    target_valence: float | None,
+    target_arousal: float | None,
+    target_dominance: float | None,
+) -> str:
+    """
+    Converts numeric VAD targets into a natural-language instruction
+    that is appended to the generation prompt so the model actively
+    steers toward the desired emotional profile.
+    """
+    parts = []
+
+    if target_valence is not None:
+        if target_valence >= 0.5:
+            parts.append("warm, enthusiastic, and positive in tone")
+        elif target_valence >= 0.05:
+            parts.append("mildly positive and encouraging in tone")
+        elif target_valence > -0.05:
+            parts.append("neutral and objective in tone")
+        elif target_valence > -0.5:
+            parts.append("serious or cautious in tone")
+        else:
+            parts.append("critical and direct in tone")
+
+    if target_arousal is not None:
+        if target_arousal >= 0.7:
+            parts.append("high-energy and urgent")
+        elif target_arousal >= 0.5:
+            parts.append("active and engaging")
+        elif target_arousal >= 0.3:
+            parts.append("moderately energetic")
+        else:
+            parts.append("calm and measured")
+
+    if target_dominance is not None:
+        if target_dominance >= 0.75:
+            parts.append("commanding and assertive")
+        elif target_dominance >= 0.6:
+            parts.append("confident and purposeful")
+        elif target_dominance >= 0.4:
+            parts.append("balanced and neither passive nor forceful")
+        else:
+            parts.append("soft and understated")
+
+    if not parts:
+        return ""
+    return "Emotional target: " + ", ".join(parts) + "."
+
 
 # Credit cost per action
 CREDIT_COST = {
@@ -40,73 +89,6 @@ def _check_and_deduct_credits(user_id: int, cost: int, description: str) -> None
     )
     db.session.add(tx)
 
-def generate_caption(
-    business_name: str,
-    industry: str,
-    target_audience: str,
-    tone: str,
-    platform: str,
-    description: str,
-    goal: str = "",
-    region:str="UK",
-    length: str = "short"
-) -> dict:
-    """
-    Controller for AI caption generation.
-    Coordinates data between route and service.
-    """
-
-
-    caption = generate_marketing_text(
-        business_name=business_name,
-        industry=industry,
-        target_audience=target_audience,
-        tone=tone,
-        platform=platform,
-        description=description,
-        goal=goal,
-        length=length,
-        region=region
-    ) 
-
-    if not caption or not caption.strip():
-        raise ValueError("AI returned empty output")
-    evaluation = evaluate_text(caption)
-    user_id = int(get_jwt_identity())
-
-    prompt_text = f"""
-Business: {business_name}
-Industry: {industry}
-Target Audience: {target_audience}
-Tone: {tone}
-Platform: {platform}
-Description: {description}
-Goal: {goal}
-Length: {length}
-Region: {region}
-"""
-
-    # Store in DB
-    content = GeneratedContent(
-        user_id=user_id,
-        content_type="text",
-        original_prompt=prompt_text.strip(),
-        # Temporary compatibility write: Week 3 will generate true A/B variants.
-        variant_a_text=caption,
-        variant_b_text=caption,
-        variant_a_eval_json=evaluation,
-        variant_b_eval_json=evaluation,
-        selected_variant=None,
-    )
-
-    db.session.add(content)
-    db.session.commit()
-
-    return {
-        "content": caption,
-        "evaluation": evaluation
-    }
-
 
 def generate_ad_copy(
     business_name: str,
@@ -127,6 +109,9 @@ def generate_ad_copy(
     shot_type: str = "medium",
     include_keywords="",
     avoid_keywords="",
+    target_valence: float | None = None,
+    target_arousal: float | None = None,
+    target_dominance: float | None = None,
 ) -> dict:
     
     result = generate_ad_text(
@@ -148,12 +133,16 @@ def generate_ad_copy(
         shot_type=shot_type,
         include_keywords=include_keywords,
         avoid_keywords=avoid_keywords,
+        vad_instruction=_vad_prompt_instruction(target_valence, target_arousal, target_dominance),
     )
     ad_copy = result.get("ad_copy", "")
     if not ad_copy or not ad_copy.strip():
         raise ValueError("AI returned empty output")
 
     evaluation = evaluate_text(ad_copy)
+    alignment = _calculate_alignment(evaluation, target_valence, target_arousal, target_dominance)
+    if alignment:
+        evaluation["vad_alignment"] = alignment
     user_id = int(get_jwt_identity())
 
     prompt_text = f"""
@@ -207,10 +196,15 @@ def generate_text_variants(
     goal: str = "",
     region: str = "UK",
     length: str = "short",
+    target_valence: float | None = None,
+    target_arousal: float | None = None,
+    target_dominance: float | None = None,
 ) -> dict:
     """
     Generate two distinct text variants, evaluate both, and persist them.
     """
+    vad_instruction = _vad_prompt_instruction(target_valence, target_arousal, target_dominance)
+
     angle_a = (
         "Creative brief for Variant A: emotional storytelling. "
         "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
@@ -220,28 +214,20 @@ def generate_text_variants(
         "Lead with concrete value, include one specific benefit, and end with a clear action."
     )
 
-    variant_a = generate_marketing_text(
+    shared_kwargs = dict(
         business_name=business_name,
         industry=industry,
         target_audience=target_audience,
         tone=tone,
         platform=platform,
-        description=f"{description} {angle_a}",
         goal=goal,
         length=length,
         region=region,
+        vad_instruction=vad_instruction,
     )
-    variant_b = generate_marketing_text(
-        business_name=business_name,
-        industry=industry,
-        target_audience=target_audience,
-        tone=tone,
-        platform=platform,
-        description=f"{description} {angle_b}",
-        goal=goal,
-        length=length,
-        region=region,
-    )
+
+    variant_a = generate_marketing_text(description=f"{description} {angle_a}", **shared_kwargs)
+    variant_b = generate_marketing_text(description=f"{description} {angle_b}", **shared_kwargs)
 
     # If outputs are too close, force a sharper second style split for B.
     if variant_a.strip().lower() == variant_b.strip().lower():
@@ -249,17 +235,7 @@ def generate_text_variants(
             "Creative brief for Variant B: concise, punchy, and utility-first. "
             "Use different wording from any storytelling style and focus on one measurable outcome."
         )
-        variant_b = generate_marketing_text(
-            business_name=business_name,
-            industry=industry,
-            target_audience=target_audience,
-            tone=tone,
-            platform=platform,
-            description=f"{description} {fallback_b}",
-            goal=goal,
-            length=length,
-            region=region,
-        )
+        variant_b = generate_marketing_text(description=f"{description} {fallback_b}", **shared_kwargs)
 
     if not variant_a or not variant_a.strip():
         raise ValueError("AI returned empty output for variant A")
@@ -268,6 +244,14 @@ def generate_text_variants(
 
     eval_a = evaluate_text(variant_a)
     eval_b = evaluate_text(variant_b)
+
+    alignment_a = _calculate_alignment(eval_a, target_valence, target_arousal, target_dominance)
+    alignment_b = _calculate_alignment(eval_b, target_valence, target_arousal, target_dominance)
+    if alignment_a:
+        eval_a["vad_alignment"] = alignment_a
+    if alignment_b:
+        eval_b["vad_alignment"] = alignment_b
+
     user_id = int(get_jwt_identity())
 
     prompt_text = f"""

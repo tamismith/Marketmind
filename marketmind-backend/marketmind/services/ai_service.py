@@ -302,6 +302,7 @@ def generate_marketing_text(
     goal: str = "",
     region: str = "UK",
     length: str = "short",
+    vad_instruction: str = "",
 ) -> str:
     length_instruction = {
         "short": "1-2 sentences",
@@ -312,6 +313,11 @@ def generate_marketing_text(
     platform_rules = _platform_rule_block(platform_key)
     platform_shape = _platform_output_shape(platform_key)
     region_rules = _region_rule_block(region)
+
+    emotional_target_section = (
+        f"\nEmotional target:\n{vad_instruction}\n"
+        if vad_instruction else ""
+    )
 
     prompt = f"""
 You are a senior creative strategist for SME marketing campaigns.
@@ -327,7 +333,7 @@ Context:
 - Tone: {tone}
 - Region: {region}
 - Length: {length_instruction}
-
+{emotional_target_section}
 Creative direction:
 - Style profile: {platform_style}
 - Use one vivid image, detail, or scene to make the copy feel concrete.
@@ -386,6 +392,7 @@ def generate_ad_text(
     shot_type: str = "medium",
     include_keywords="",
     avoid_keywords="",
+    vad_instruction: str = "",
 ) -> dict:
     """
     Generates conversion-focused ad copy using GPT
@@ -405,6 +412,11 @@ def generate_ad_text(
     platform_shape = _platform_output_shape(platform_key)
     region_rules = _region_rule_block(region)
 
+    emotional_target_section = (
+        f"\nEmotional target:\n{vad_instruction}\n"
+        if vad_instruction else ""
+    )
+
     text_prompt = f"""
 You are an expert performance marketing copywriter for small businesses.
 
@@ -421,7 +433,7 @@ Goal: {goal if goal else "Increase conversions"}
 Offer: {offer if offer else "None"}
 Call to action: {cta if cta else "Use a natural call to action"}
 Style profile: {platform_style}
-
+{emotional_target_section}
 Rules:
 - Clear and simple language
 - No exaggerated claims
@@ -429,6 +441,7 @@ Rules:
 - Do not mention AI
 - Include one concrete detail that makes the ad feel real, not generic
 - End with one strong action line
+
 Platform-specific execution:
 {platform_rules}
 Regional adaptation:
