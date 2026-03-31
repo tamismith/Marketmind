@@ -6,6 +6,7 @@ from ..responses import error_response
 from marketmind.extensions import db
 from marketmind.models.user import User
 from marketmind.models.credit_transaction import CreditTransaction
+from marketmind.models.business_profile import BusinessProfile
 
 auth_blueprint = Blueprint("auth", __name__)
 
@@ -69,6 +70,10 @@ def register():
 
     db.session.add(user)
     db.session.flush()
+
+    # Create an empty business profile for this user
+    profile = BusinessProfile(user_id=user.id)
+    db.session.add(profile)
 
     # Log the initial free credit grant
     tx = CreditTransaction(

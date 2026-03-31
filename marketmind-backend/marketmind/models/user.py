@@ -16,6 +16,7 @@ class User(db.Model):
     generated_contents = db.relationship("GeneratedContent", backref="user", lazy=True)
     brand_memory = db.relationship("BrandMemory", backref="user", uselist=False)
     credit_transactions = db.relationship("CreditTransaction", backref="user", lazy=True)
+    business_profile = db.relationship("BusinessProfile", backref="user", uselist=False)
 
 
     def set_password(self, password: str) -> None:

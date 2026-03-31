@@ -4,6 +4,7 @@ from .config.setting import load_config
 from .routes.ai_routes import ai_blueprint
 from marketmind.extensions import db, migrate, jwt
 from .routes.auth_routes import auth_blueprint
+from .routes.business_routes import business_blueprint
 from .responses import error_response
 
 def create_app():
@@ -51,6 +52,7 @@ def create_app():
     # Register blueprints (groups of routes)
     app.register_blueprint(ai_blueprint, url_prefix="/api/ai")
     app.register_blueprint(auth_blueprint, url_prefix="/auth")
+    app.register_blueprint(business_blueprint, url_prefix="/api/business")
 
 
     return app
