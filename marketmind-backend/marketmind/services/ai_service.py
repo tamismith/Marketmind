@@ -393,10 +393,12 @@ def generate_ad_text(
     include_keywords="",
     avoid_keywords="",
     vad_instruction: str = "",
+    text_only: bool = False,
 ) -> dict:
     """
     Generates conversion-focused ad copy using GPT
     and a matching marketing image using Stability AI.
+    Pass text_only=True to skip image generation and return only ad_copy.
     """
 
     # -------------------------
@@ -464,7 +466,9 @@ Return only the ad copy text.
         logger.error("GPT ERROR: %s", e)
         ad_copy = "Unable to generate ad copy at this time."
 
-    
+    if text_only:
+        return {"ad_copy": ad_copy, "image_base64": "", "image_options": [], "image_warnings": []}
+
     image_base64 = ""
     image_options = []
 

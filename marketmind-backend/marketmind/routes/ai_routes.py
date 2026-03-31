@@ -5,6 +5,8 @@ logger = logging.getLogger(__name__)
 from ..controllers.ai_controller import (
     generate_ad_copy,
     generate_text_variants,
+    regenerate_text,
+    regenerate_ad_copy_text,
     select_text_variant,
     select_ad_image,
     get_user_history,
@@ -246,6 +248,70 @@ def generate_text_endpoint():
             "Something went wrong while generating text variants",
             500,
         )
+
+
+@ai_blueprint.route("/regenerate/text", methods=["POST"])
+@jwt_required()
+def regenerate_text_endpoint():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return error_response("INVALID_REQUEST", "Request body must be JSON", 400)
+
+        content_id = data.get("content_id")
+        if content_id is None:
+            return error_response(
+                "MISSING_FIELDS",
+                "content_id is required",
+                400,
+                {"missing_fields": ["content_id"]},
+            )
+
+        result = regenerate_text(content_id=int(content_id))
+        return jsonify(result), 200
+
+    except ValueError as e:
+        msg = str(e)
+        if "Insufficient credits" in msg:
+            return error_response("INSUFFICIENT_CREDITS", msg, 402)
+        return error_response("GENERATION_ERROR", msg, 400)
+    except LookupError as e:
+        return error_response("NOT_FOUND", str(e), 404)
+    except Exception as e:
+        logger.error("ERROR: %s", e)
+        return error_response("SERVER_ERROR", "Something went wrong while regenerating text", 500)
+
+
+@ai_blueprint.route("/regenerate/ad-copy", methods=["POST"])
+@jwt_required()
+def regenerate_ad_copy_endpoint():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return error_response("INVALID_REQUEST", "Request body must be JSON", 400)
+
+        content_id = data.get("content_id")
+        if content_id is None:
+            return error_response(
+                "MISSING_FIELDS",
+                "content_id is required",
+                400,
+                {"missing_fields": ["content_id"]},
+            )
+
+        result = regenerate_ad_copy_text(content_id=int(content_id))
+        return jsonify(result), 200
+
+    except ValueError as e:
+        msg = str(e)
+        if "Insufficient credits" in msg:
+            return error_response("INSUFFICIENT_CREDITS", msg, 402)
+        return error_response("GENERATION_ERROR", msg, 400)
+    except LookupError as e:
+        return error_response("NOT_FOUND", str(e), 404)
+    except Exception as e:
+        logger.error("ERROR: %s", e)
+        return error_response("SERVER_ERROR", "Something went wrong while regenerating ad copy", 500)
 
 
 @ai_blueprint.route("/select/text", methods=["POST"])

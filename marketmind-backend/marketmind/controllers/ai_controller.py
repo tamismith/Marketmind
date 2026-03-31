@@ -290,6 +290,175 @@ Region: {region}
     }
 
 
+def _parse_prompt_fields(prompt: str) -> dict:
+    """
+    Parse all key:value fields from a stored original_prompt string.
+    Returns a flat dict with normalised keys (lowercase, spaces → underscores).
+    """
+    fields: dict = {}
+    for line in prompt.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        fields[key.strip().lower().replace(" ", "_")] = value.strip()
+    return fields
+
+
+def regenerate_text(content_id: int) -> dict:
+    """
+    Re-generate both A/B text variants for an existing content row.
+    Overwrites the row in-place and resets selected_variant.
+    Costs 1 credit.
+    """
+    user_id = int(get_jwt_identity())
+    content = GeneratedContent.query.filter_by(id=content_id, user_id=user_id).first()
+    if not content:
+        raise LookupError("Content not found for this user")
+    if content.content_type != "text":
+        raise ValueError("Content is not a text generation")
+
+    f = _parse_prompt_fields(content.original_prompt)
+    business_name    = f.get("business", "")
+    industry         = f.get("industry", "")
+    target_audience  = f.get("target_audience", "")
+    tone             = f.get("tone", "")
+    platform         = f.get("platform", "")
+    description      = f.get("description", "")
+    goal             = f.get("goal", "")
+    length           = f.get("length", "short")
+    region           = f.get("region", "UK")
+
+    angle_a = (
+        "Creative brief for Variant A: emotional storytelling. "
+        "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
+    )
+    angle_b = (
+        "Creative brief for Variant B: direct performance style. "
+        "Lead with concrete value, include one specific benefit, and end with a clear action."
+    )
+
+    shared_kwargs = dict(
+        business_name=business_name,
+        industry=industry,
+        target_audience=target_audience,
+        tone=tone,
+        platform=platform,
+        goal=goal,
+        length=length,
+        region=region,
+    )
+
+    variant_a = generate_marketing_text(description=f"{description} {angle_a}", **shared_kwargs)
+    variant_b = generate_marketing_text(description=f"{description} {angle_b}", **shared_kwargs)
+
+    if variant_a.strip().lower() == variant_b.strip().lower():
+        fallback_b = (
+            "Creative brief for Variant B: concise, punchy, and utility-first. "
+            "Use different wording from any storytelling style and focus on one measurable outcome."
+        )
+        variant_b = generate_marketing_text(description=f"{description} {fallback_b}", **shared_kwargs)
+
+    if not variant_a or not variant_a.strip():
+        raise ValueError("AI returned empty output for variant A")
+    if not variant_b or not variant_b.strip():
+        raise ValueError("AI returned empty output for variant B")
+
+    eval_a = evaluate_text(variant_a)
+    eval_b = evaluate_text(variant_b)
+
+    _check_and_deduct_credits(user_id, CREDIT_COST["regenerate"], "Text regeneration")
+
+    content.variant_a_text = variant_a
+    content.variant_b_text = variant_b
+    content.variant_a_eval_json = eval_a
+    content.variant_b_eval_json = eval_b
+    content.selected_variant = None
+    db.session.commit()
+
+    return {
+        "content_id": content.id,
+        "variant_a": variant_a,
+        "variant_b": variant_b,
+        "evaluation_a": eval_a,
+        "evaluation_b": eval_b,
+    }
+
+
+def regenerate_ad_copy_text(content_id: int) -> dict:
+    """
+    Re-generate ad copy text for an existing ad_copy row (no image).
+    Overwrites the row in-place and resets selected_variant.
+    Costs 1 credit.
+    """
+    user_id = int(get_jwt_identity())
+    content = GeneratedContent.query.filter_by(id=content_id, user_id=user_id).first()
+    if not content:
+        raise LookupError("Content not found for this user")
+    if content.content_type != "ad_copy":
+        raise ValueError("Content is not an ad copy generation")
+
+    f = _parse_prompt_fields(content.original_prompt)
+    business_name   = f.get("business", "")
+    industry        = f.get("industry", "")
+    target_audience = f.get("target_audience", "")
+    tone            = f.get("tone", "")
+    platform        = f.get("platform", "")
+    description     = f.get("description", "")
+    goal            = f.get("goal", "")
+    length          = f.get("length", "short")
+    region          = f.get("region", "UK")
+    offer           = f.get("offer", "")
+    cta             = f.get("cta", "")
+    color_palette   = f.get("color_palette", "")
+    style_preset    = f.get("style_preset", "realistic")
+    aspect_ratio    = f.get("aspect_ratio", "1:1")
+    shot_type       = f.get("shot_type", "medium")
+    include_keywords = f.get("include_keywords", "")
+    avoid_keywords   = f.get("avoid_keywords", "")
+    high_quality     = f.get("high_quality_image_mode", "enabled") == "enabled"
+
+    result = generate_ad_text(
+        business_name=business_name,
+        industry=industry,
+        target_audience=target_audience,
+        tone=tone,
+        platform=platform,
+        description=description,
+        goal=goal,
+        region=region,
+        length=length,
+        offer=offer,
+        cta=cta,
+        color_palette=color_palette,
+        high_quality=high_quality,
+        style_preset=style_preset,
+        aspect_ratio=aspect_ratio,
+        shot_type=shot_type,
+        include_keywords=include_keywords,
+        avoid_keywords=avoid_keywords,
+        text_only=True,
+    )
+
+    ad_copy = result.get("ad_copy", "")
+    if not ad_copy or not ad_copy.strip():
+        raise ValueError("AI returned empty output")
+
+    evaluation = evaluate_text(ad_copy)
+
+    _check_and_deduct_credits(user_id, CREDIT_COST["regenerate"], "Ad copy text regeneration")
+
+    content.variant_a_text = ad_copy
+    content.variant_a_eval_json = evaluation
+    content.selected_variant = None
+    db.session.commit()
+
+    return {
+        "content_id": content.id,
+        "ad_copy": ad_copy,
+        "evaluation": evaluation,
+    }
+
+
 def _extract_context_from_prompt(prompt: str) -> dict:
     context: dict = {}
     for line in prompt.splitlines():
