@@ -248,6 +248,8 @@ export default function Generate() {
   const [vadTargets, setVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
   const [adVadEnabled, setAdVadEnabled] = useState(false);
   const [adVadTargets, setAdVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [isRegeneratingAd, setIsRegeneratingAd] = useState(false);
 
   const loadMemoryPreview = async () => {
     try {
@@ -358,6 +360,37 @@ export default function Generate() {
       setAdErrorMessage(error.message || "Failed to generate ad copy.");
     } finally {
       setIsAdGenerating(false);
+    }
+  };
+
+  const onRegenerate = async () => {
+    if (!result?.content_id) return;
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsRegenerating(true);
+    try {
+      const data = await api.post("/api/ai/regenerate/text", { content_id: result.content_id });
+      setResult((prev) => ({ ...prev, ...data }));
+      setPendingTextSelection("");
+    } catch (error) {
+      setErrorMessage(error.message || "Failed to regenerate.");
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
+  const onRegenerateAd = async () => {
+    if (!adResult?.content_id) return;
+    setAdErrorMessage("");
+    setAdSuccessMessage("");
+    setIsRegeneratingAd(true);
+    try {
+      const data = await api.post("/api/ai/regenerate/ad-copy", { content_id: adResult.content_id });
+      setAdResult((prev) => ({ ...prev, ad_copy: data.ad_copy, evaluation: data.evaluation }));
+    } catch (error) {
+      setAdErrorMessage(error.message || "Failed to regenerate ad copy.");
+    } finally {
+      setIsRegeneratingAd(false);
     }
   };
 
@@ -593,6 +626,13 @@ export default function Generate() {
             >
               {isSelecting ? "Saving..." : "Save Selected Variant"}
             </button>
+            <button
+              className="btnGhost btnInline"
+              onClick={onRegenerate}
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? "Regenerating..." : "Regenerate (1 credit)"}
+            </button>
             <button className="btnGhost btnInline" onClick={() => navigate("/app/history")}>
               View Saved History
             </button>
@@ -777,6 +817,18 @@ export default function Generate() {
                   <p className="muted">No image returned for this request.</p>
                 )}
               </div>
+            </div>
+          ) : null}
+          {adResult ? (
+            <div className="actionRow" style={{ marginTop: 10 }}>
+              <button
+                type="button"
+                className="btnGhost btnInline"
+                onClick={onRegenerateAd}
+                disabled={isRegeneratingAd}
+              >
+                {isRegeneratingAd ? "Regenerating..." : "Regenerate Copy (1 credit)"}
+              </button>
             </div>
           ) : null}
         </div>
