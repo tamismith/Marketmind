@@ -238,14 +238,12 @@ export default function Generate() {
   const [successMessage, setSuccessMessage] = useState("");
   const [showTextAdvanced, setShowTextAdvanced] = useState(false);
   const [showAdAdvanced, setShowAdAdvanced] = useState(false);
-  const [vadEnabled, setVadEnabled] = useState(false);
-  const [vadTargets, setVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
-  const [adVadEnabled, setAdVadEnabled] = useState(false);
-  const [adVadTargets, setAdVadTargets] = useState({ valence: 0, arousal: 0.5, dominance: 0.5 });
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRegeneratingAd, setIsRegeneratingAd] = useState(false);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState("");
 
   const loadMemoryPreview = async () => {
     try {
@@ -274,6 +272,13 @@ export default function Generate() {
       .then((data) => setProfile(data))
       .catch(() => setProfile(null))
       .finally(() => setProfileLoading(false));
+    api.get("/api/campaigns")
+      .then((data) => {
+        const list = data.campaigns || [];
+        setCampaigns(list);
+        if (list.length > 0) setSelectedCampaignId(String(list[0].id));
+      })
+      .catch(() => setCampaigns([]));
   }, []);
 
   const onChange = (e) => {
@@ -299,11 +304,7 @@ export default function Generate() {
         industry: profile?.industry || "",
         target_audience: profile?.target_audience || "",
         region: form.region || profile?.region || "",
-        ...(vadEnabled ? {
-          target_valence: vadTargets.valence,
-          target_arousal: vadTargets.arousal,
-          target_dominance: vadTargets.dominance,
-        } : {}),
+        campaign_id: selectedCampaignId ? parseInt(selectedCampaignId) : null,
       };
       const data = await api.post("/api/ai/generate/text", payload);
       setResult(data);
@@ -351,11 +352,7 @@ export default function Generate() {
         industry: profile?.industry || "",
         target_audience: profile?.target_audience || "",
         region: adForm.region || profile?.region || "",
-        ...(adVadEnabled ? {
-          target_valence: adVadTargets.valence,
-          target_arousal: adVadTargets.arousal,
-          target_dominance: adVadTargets.dominance,
-        } : {}),
+        campaign_id: selectedCampaignId ? parseInt(selectedCampaignId) : null,
       };
       const data = await api.post("/api/ai/ad-copy", payload);
       setAdResult(data);
@@ -458,6 +455,39 @@ export default function Generate() {
         </div>
       )}
 
+      {/* Campaign selector */}
+      {campaigns.length > 0 && (() => {
+        const selected = campaigns.find((c) => String(c.id) === String(selectedCampaignId));
+        return (
+          <div className="sectionCard">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <label className="muted" style={{ fontSize: 13 }}>Campaign</label>
+                <Link to="/app/campaigns" className="link" style={{ fontSize: 13 }}>Manage →</Link>
+              </div>
+              <select
+                className="input"
+                value={selectedCampaignId}
+                onChange={(e) => setSelectedCampaignId(e.target.value)}
+              >
+                {campaigns.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              {selected && (
+                <div className="muted" style={{ fontSize: 12, display: "flex", gap: 12 }}>
+                  {selected.goal && <span>Goal: {selected.goal}</span>}
+                  {selected.target_valence != null && (
+                    <span>Feel {selected.target_valence?.toFixed(2)} · Energy {selected.target_arousal?.toFixed(2)} · Voice {selected.target_dominance?.toFixed(2)}</span>
+                  )}
+                  {selected.target_valence == null && <span>No emotional targets set</span>}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       <div className="actionRow">
         <button
           className={activeMode === "text" ? "btn btnInline" : "btnGhost btnInline"}
@@ -496,50 +526,11 @@ export default function Generate() {
 
             {/* Advanced fields */}
             {showTextAdvanced ? (
-              <>
-                <div className="formGrid4" style={{ marginTop: 8 }}>
-                  <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
-                  <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
-                  <input className="input" name="region" placeholder="Region" value={form.region} onChange={onChange} />
-                </div>
-                <div style={{ marginTop: 12 }}>
-                  <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
-                    <input type="checkbox" checked={vadEnabled} onChange={(e) => setVadEnabled(e.target.checked)} />
-                    Target emotional profile
-                  </label>
-                  {vadEnabled ? (
-                    <div style={{ display: "grid", gap: 10, paddingLeft: 4 }}>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span className="muted" style={{ fontSize: 12 }}>Overall Feel (Valence)</span>
-                          <span className="muted" style={{ fontSize: 12 }}>{vadTargets.valence.toFixed(2)}</span>
-                        </div>
-                        <input type="range" min={-1} max={1} step={0.05} value={vadTargets.valence}
-                          onChange={(e) => setVadTargets((prev) => ({ ...prev, valence: parseFloat(e.target.value) }))}
-                          style={{ width: "100%", accentColor: "#0ea5a3" }} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span className="muted" style={{ fontSize: 12 }}>Energy (Arousal)</span>
-                          <span className="muted" style={{ fontSize: 12 }}>{vadTargets.arousal.toFixed(2)}</span>
-                        </div>
-                        <input type="range" min={0} max={1} step={0.05} value={vadTargets.arousal}
-                          onChange={(e) => setVadTargets((prev) => ({ ...prev, arousal: parseFloat(e.target.value) }))}
-                          style={{ width: "100%", accentColor: "#f59e0b" }} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span className="muted" style={{ fontSize: 12 }}>Voice (Dominance)</span>
-                          <span className="muted" style={{ fontSize: 12 }}>{vadTargets.dominance.toFixed(2)}</span>
-                        </div>
-                        <input type="range" min={0} max={1} step={0.05} value={vadTargets.dominance}
-                          onChange={(e) => setVadTargets((prev) => ({ ...prev, dominance: parseFloat(e.target.value) }))}
-                          style={{ width: "100%", accentColor: "#8b5cf6" }} />
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </>
+              <div className="formGrid4" style={{ marginTop: 8 }}>
+                <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
+                <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
+                <input className="input" name="region" placeholder="Region override" value={form.region} onChange={onChange} />
+              </div>
             ) : null}
 
             <button className="btn" type="submit" disabled={isGenerating}>
@@ -741,43 +732,6 @@ export default function Generate() {
                   <input type="checkbox" name="high_quality" checked={adForm.high_quality} onChange={onAdChange} />
                   High quality image mode (sharper, slower)
                 </label>
-                <div style={{ marginTop: 12 }}>
-                  <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, cursor: "pointer" }}>
-                    <input type="checkbox" checked={adVadEnabled} onChange={(e) => setAdVadEnabled(e.target.checked)} />
-                    Target emotional profile
-                  </label>
-                  {adVadEnabled ? (
-                    <div style={{ display: "grid", gap: 10, paddingLeft: 4 }}>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span className="muted" style={{ fontSize: 12 }}>Overall Feel (Valence)</span>
-                          <span className="muted" style={{ fontSize: 12 }}>{adVadTargets.valence.toFixed(2)}</span>
-                        </div>
-                        <input type="range" min={-1} max={1} step={0.05} value={adVadTargets.valence}
-                          onChange={(e) => setAdVadTargets((prev) => ({ ...prev, valence: parseFloat(e.target.value) }))}
-                          style={{ width: "100%", accentColor: "#0ea5a3" }} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span className="muted" style={{ fontSize: 12 }}>Energy (Arousal)</span>
-                          <span className="muted" style={{ fontSize: 12 }}>{adVadTargets.arousal.toFixed(2)}</span>
-                        </div>
-                        <input type="range" min={0} max={1} step={0.05} value={adVadTargets.arousal}
-                          onChange={(e) => setAdVadTargets((prev) => ({ ...prev, arousal: parseFloat(e.target.value) }))}
-                          style={{ width: "100%", accentColor: "#f59e0b" }} />
-                      </div>
-                      <div>
-                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                          <span className="muted" style={{ fontSize: 12 }}>Voice (Dominance)</span>
-                          <span className="muted" style={{ fontSize: 12 }}>{adVadTargets.dominance.toFixed(2)}</span>
-                        </div>
-                        <input type="range" min={0} max={1} step={0.05} value={adVadTargets.dominance}
-                          onChange={(e) => setAdVadTargets((prev) => ({ ...prev, dominance: parseFloat(e.target.value) }))}
-                          style={{ width: "100%", accentColor: "#8b5cf6" }} />
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
               </>
             ) : null}
 

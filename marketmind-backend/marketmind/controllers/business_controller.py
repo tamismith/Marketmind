@@ -6,7 +6,9 @@ from marketmind.models.business_profile import BusinessProfile
 def get_profile(user_id: int) -> dict:
     profile = BusinessProfile.query.filter_by(user_id=user_id).first()
     if not profile:
-        return {"error": "NOT_FOUND"}
+        profile = BusinessProfile(user_id=user_id)
+        db.session.add(profile)
+        db.session.commit()
 
     return {
         "business_name": profile.business_name,
@@ -21,7 +23,8 @@ def get_profile(user_id: int) -> dict:
 def update_profile(user_id: int, data: dict) -> dict:
     profile = BusinessProfile.query.filter_by(user_id=user_id).first()
     if not profile:
-        return {"error": "NOT_FOUND"}
+        profile = BusinessProfile(user_id=user_id)
+        db.session.add(profile)
 
     allowed_fields = ["business_name", "industry", "target_audience", "region", "logo_base64"]
 

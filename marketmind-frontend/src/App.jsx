@@ -10,6 +10,7 @@ import History from "./pages/History.jsx";
 import Analytics from "./pages/Analytics.jsx";
 import Plans from "./pages/Plans.jsx";
 import Brand from "./pages/Brand.jsx";
+import Campaigns from "./pages/Campaigns.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
@@ -43,6 +44,7 @@ export default function App() {
         <Route path="analytics" element={<Analytics />} />
         <Route path="plans" element={<Plans />} />
         <Route path="brand" element={<Brand />} />
+        <Route path="campaigns" element={<Campaigns />} />
       </Route>
       
 

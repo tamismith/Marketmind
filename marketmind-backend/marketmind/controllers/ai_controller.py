@@ -7,7 +7,17 @@ from flask_jwt_extended import get_jwt_identity
 from ..models.generated_content import GeneratedContent
 from ..models.user import User
 from ..models.credit_transaction import CreditTransaction
+from ..models.campaign import Campaign
 from marketmind.extensions import db
+
+def _campaign_prompt_instruction(name: str, goal: str) -> str:
+    if not name or name == "General":
+        return ""
+    parts = [f"Campaign: {name}"]
+    if goal and goal.strip():
+        parts.append(f"Campaign goal: {goal.strip()}")
+    return "\n".join(parts)
+
 
 def _vad_prompt_instruction(
     target_valence: float | None,
@@ -96,6 +106,7 @@ def generate_ad_copy(
     target_audience: str,
     tone: str,
     platform: str,
+    campaign_id: int | None = None,
     description: str = "",
     goal: str = "",
     region: str = "UK",
@@ -109,11 +120,17 @@ def generate_ad_copy(
     shot_type: str = "medium",
     include_keywords="",
     avoid_keywords="",
-    target_valence: float | None = None,
-    target_arousal: float | None = None,
-    target_dominance: float | None = None,
 ) -> dict:
     
+    user_id = int(get_jwt_identity())
+    campaign = Campaign.query.filter_by(id=campaign_id, user_id=user_id).first() if campaign_id else None
+    if campaign_id and not campaign:
+        raise LookupError("Campaign not found")
+
+    target_valence = campaign.target_valence if campaign else None
+    target_arousal = campaign.target_arousal if campaign else None
+    target_dominance = campaign.target_dominance if campaign else None
+
     result = generate_ad_text(
         business_name=business_name,
         industry=industry,
@@ -134,6 +151,10 @@ def generate_ad_copy(
         include_keywords=include_keywords,
         avoid_keywords=avoid_keywords,
         vad_instruction=_vad_prompt_instruction(target_valence, target_arousal, target_dominance),
+        campaign_instruction=_campaign_prompt_instruction(
+            campaign.name if campaign else "",
+            campaign.goal if campaign else "",
+        ),
     )
     ad_copy = result.get("ad_copy", "")
     if not ad_copy or not ad_copy.strip():
@@ -177,6 +198,7 @@ Avoid keywords: {avoid_keywords}
         variant_a_eval_json=evaluation,
         variant_b_eval_json={},
         selected_variant=None,
+        campaign_id=campaign_id,
     )
     db.session.add(content)
     db.session.commit()
@@ -193,16 +215,23 @@ def generate_text_variants(
     tone: str,
     platform: str,
     description: str,
+    campaign_id: int | None = None,
     goal: str = "",
     region: str = "UK",
     length: str = "short",
-    target_valence: float | None = None,
-    target_arousal: float | None = None,
-    target_dominance: float | None = None,
 ) -> dict:
     """
     Generate two distinct text variants, evaluate both, and persist them.
     """
+    user_id = int(get_jwt_identity())
+    campaign = Campaign.query.filter_by(id=campaign_id, user_id=user_id).first() if campaign_id else None
+    if campaign_id and not campaign:
+        raise LookupError("Campaign not found")
+
+    target_valence = campaign.target_valence if campaign else None
+    target_arousal = campaign.target_arousal if campaign else None
+    target_dominance = campaign.target_dominance if campaign else None
+
     vad_instruction = _vad_prompt_instruction(target_valence, target_arousal, target_dominance)
 
     angle_a = (
@@ -224,6 +253,10 @@ def generate_text_variants(
         length=length,
         region=region,
         vad_instruction=vad_instruction,
+        campaign_instruction=_campaign_prompt_instruction(
+            campaign.name if campaign else "",
+            campaign.goal if campaign else "",
+        ),
     )
 
     variant_a = generate_marketing_text(description=f"{description} {angle_a}", **shared_kwargs)
@@ -252,8 +285,6 @@ def generate_text_variants(
     if alignment_b:
         eval_b["vad_alignment"] = alignment_b
 
-    user_id = int(get_jwt_identity())
-
     prompt_text = f"""
 Business: {business_name}
 Industry: {industry}
@@ -276,6 +307,7 @@ Region: {region}
         variant_b_text=variant_b,
         variant_a_eval_json=eval_a,
         variant_b_eval_json=eval_b,
+        campaign_id=campaign_id,
         selected_variant=None,
     )
     db.session.add(content)

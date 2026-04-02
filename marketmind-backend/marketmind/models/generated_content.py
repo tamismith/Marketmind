@@ -17,5 +17,6 @@ class GeneratedContent(db.Model):
     selected_variant = db.Column(db.String(1), nullable=True)
     selected_image_option_id = db.Column(db.String(40), nullable=True)
     selected_image_base64 = db.Column(db.Text, nullable=True)
+    campaign_id = db.Column(db.Integer, db.ForeignKey("campaigns.id"), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

@@ -150,6 +150,41 @@ PALETTE_PRESETS = {
     "monochrome": "monochrome palette with tonal depth and grayscale discipline",
 }
 
+LOGO_STYLE_PRESETS = {
+    "minimal": "flat 2D vector icon, minimal lines, single colour or two-tone, lots of negative space, clean and simple",
+    "modern": "modern flat vector logo mark, geometric precision, bold clean shapes, strong contrast, professional app icon aesthetic",
+    "bold": "bold graphic logo mark, thick strokes, high contrast colours, strong and impactful, solid shapes",
+    "classic": "classic emblem-style logo mark, balanced symmetry, refined details, timeless professional look",
+}
+
+LOGO_FEELING_PRESETS = {
+    "premium": "sophisticated, high-end, luxurious feel",
+    "playful": "fun, friendly, approachable energy",
+    "trustworthy": "reliable, solid, professional credibility",
+    "bold": "strong, confident, impactful presence",
+    "calm": "peaceful, gentle, soft and serene",
+    "energetic": "dynamic, vibrant, high-energy movement",
+}
+
+LOGO_SHAPE_PRESETS = {
+    "abstract": "abstract mark with unique non-representational form",
+    "monogram": "letter or monogram-based mark, typographic identity",
+    "geometric": "precise geometric shapes, clean angular or circular forms",
+    "nature": "nature-inspired organic shapes, leaf, wave, or plant motif",
+    "badge": "badge or emblem style, contained circular or shield composition",
+    "icon": "simple recognisable icon or object symbol",
+}
+
+LOGO_COLOUR_PRESETS = {
+    "teal_white": "teal and white colour palette",
+    "navy_gold": "navy blue and gold colour palette",
+    "black_white": "black and white monochrome palette",
+    "earthy": "earthy tones, olive, warm brown, beige",
+    "pastels": "soft pastel tones, gentle and light",
+    "vibrant": "vibrant saturated bold colours",
+    "monochrome": "single colour monochrome with tonal depth",
+}
+
 STYLE_PRESET_RULES = {
     "realistic": "photorealistic style, natural textures, commercially authentic details",
     "bold": "bold visual style, stronger contrast, more expressive art direction",
@@ -303,6 +338,7 @@ def generate_marketing_text(
     region: str = "UK",
     length: str = "short",
     vad_instruction: str = "",
+    campaign_instruction: str = "",
 ) -> str:
     length_instruction = {
         "short": "1-2 sentences",
@@ -317,6 +353,10 @@ def generate_marketing_text(
     emotional_target_section = (
         f"\nEmotional target:\n{vad_instruction}\n"
         if vad_instruction else ""
+    )
+    campaign_section = (
+        f"\nCampaign context:\n{campaign_instruction}\n"
+        if campaign_instruction else ""
     )
 
     prompt = f"""
@@ -333,7 +373,7 @@ Context:
 - Tone: {tone}
 - Region: {region}
 - Length: {length_instruction}
-{emotional_target_section}
+{campaign_section}{emotional_target_section}
 Creative direction:
 - Style profile: {platform_style}
 - Use one vivid image, detail, or scene to make the copy feel concrete.
@@ -369,7 +409,8 @@ Return only the final caption text. No labels, bullets, or quotes.
             temperature=0.7,
         )
         return ai_provider.generate_text(request)
-    except AIProviderError:
+    except AIProviderError as e:
+        logger.error("TEXT GENERATION ERROR: %s", e)
         return "Unable to generate content at this time."
 
 
@@ -393,6 +434,7 @@ def generate_ad_text(
     include_keywords="",
     avoid_keywords="",
     vad_instruction: str = "",
+    campaign_instruction: str = "",
     text_only: bool = False,
 ) -> dict:
     """
@@ -419,6 +461,11 @@ def generate_ad_text(
         if vad_instruction else ""
     )
 
+    campaign_section = (
+        f"\nCampaign context:\n{campaign_instruction}\n"
+        if campaign_instruction else ""
+    )
+
     text_prompt = f"""
 You are an expert performance marketing copywriter for small businesses.
 
@@ -435,7 +482,7 @@ Goal: {goal if goal else "Increase conversions"}
 Offer: {offer if offer else "None"}
 Call to action: {cta if cta else "Use a natural call to action"}
 Style profile: {platform_style}
-{emotional_target_section}
+{campaign_section}{emotional_target_section}
 Rules:
 - Clear and simple language
 - No exaggerated claims
@@ -592,3 +639,59 @@ Creativity mode:
         "image_options": image_options,
         "image_warnings": image_warnings,
     }
+
+
+def generate_logo_image(
+    description: str,
+    style: str = "minimal",
+    feeling: str = "",
+    shape: str = "",
+    colours: str = "",
+) -> str:
+    style_instruction = LOGO_STYLE_PRESETS.get(style.strip().lower(), LOGO_STYLE_PRESETS["minimal"])
+    feeling_line = f"- Emotional feel: {LOGO_FEELING_PRESETS[feeling]}" if feeling in LOGO_FEELING_PRESETS else ""
+    shape_line = f"- Shape/symbol direction: {LOGO_SHAPE_PRESETS[shape]}" if shape in LOGO_SHAPE_PRESETS else ""
+    colour_line = f"- Colour palette: {LOGO_COLOUR_PRESETS[colours]}" if colours in LOGO_COLOUR_PRESETS else ""
+
+    extra_context = "\n".join(filter(None, [feeling_line, shape_line, colour_line]))
+
+    image_prompt = f"""
+Professional brand logo icon for a {description}.
+Style: {style_instruction}.
+{extra_context}
+
+The logo must be:
+- A single clean icon or symbol, centred on a plain white background
+- Flat 2D vector-style illustration, not photorealistic
+- Simple enough to work as an app icon or favicon
+- One strong recognisable shape — not a collage or scene
+- Solid fills, clean edges, no gradients unless part of the style
+- Isolated symbol only — no surrounding decoration, no frames, no badges unless badge style was requested
+
+This is a logo icon — NOT a photograph, NOT a scene, NOT a pattern, NOT abstract art.
+Think: Airbnb, Spotify, Dropbox — a single clean recognisable mark.
+
+Strict: no text, no letters, no words, no numbers, no watermarks, plain white background only.
+"""
+    try:
+        image_request = ImageGenerationRequest(
+            prompt=image_prompt,
+            width=1024,
+            height=1024,
+            cfg_scale=12,
+            steps=45,
+        )
+        return ai_provider.generate_image_base64(image_request)
+    except AIProviderError as e:
+        logger.error("LOGO GENERATION ERROR: %s", e)
+        try:
+            fallback = ImageGenerationRequest(
+                prompt=image_prompt,
+                width=512,
+                height=512,
+                cfg_scale=10,
+                steps=35,
+            )
+            return ai_provider.generate_image_base64(fallback)
+        except AIProviderError:
+            return ""

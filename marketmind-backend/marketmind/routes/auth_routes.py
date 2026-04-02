@@ -7,6 +7,7 @@ from marketmind.extensions import db
 from marketmind.models.user import User
 from marketmind.models.credit_transaction import CreditTransaction
 from marketmind.models.business_profile import BusinessProfile
+from marketmind.models.campaign import Campaign
 
 auth_blueprint = Blueprint("auth", __name__)
 
@@ -74,6 +75,10 @@ def register():
     # Create an empty business profile for this user
     profile = BusinessProfile(user_id=user.id)
     db.session.add(profile)
+
+    # Create a default General campaign
+    general_campaign = Campaign(user_id=user.id, name="General", goal="")
+    db.session.add(general_campaign)
 
     # Log the initial free credit grant
     tx = CreditTransaction(

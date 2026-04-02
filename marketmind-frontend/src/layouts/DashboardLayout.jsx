@@ -14,6 +14,7 @@ export default function DashboardLayout() {
     "/app/analytics": "Analytics",
     "/app/plans": "Plans & Credits",
     "/app/brand": "Brand Profile",
+    "/app/campaigns": "Campaigns",
   }[location.pathname] || "Dashboard";
 
   useEffect(() => {
@@ -83,6 +84,15 @@ export default function DashboardLayout() {
             }
           >
             Brand Profile
+          </NavLink>
+
+          <NavLink
+            to="/app/campaigns"
+            className={({ isActive }) =>
+              isActive ? "navItem navItemActive" : "navItem"
+            }
+          >
+            Campaigns
           </NavLink>
         </nav>
 

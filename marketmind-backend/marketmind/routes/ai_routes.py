@@ -80,9 +80,7 @@ def ad_copy_endpoint():
         shot_type = (data.get("shot_type") or "medium").strip().lower()
         include_keywords = data.get("include_keywords") or ""
         avoid_keywords = data.get("avoid_keywords") or ""
-        target_valence = data.get("target_valence")
-        target_arousal = data.get("target_arousal")
-        target_dominance = data.get("target_dominance")
+        campaign_id = data.get("campaign_id")
 
         if style_preset not in ALLOWED_STYLE_PRESETS:
             return error_response(
@@ -112,6 +110,7 @@ def ad_copy_endpoint():
             target_audience=target_audience,
             tone=tone,
             platform=platform,
+            campaign_id=campaign_id,
             description=description,
             goal=goal,
             length=length,
@@ -125,9 +124,6 @@ def ad_copy_endpoint():
             shot_type=shot_type,
             include_keywords=include_keywords,
             avoid_keywords=avoid_keywords,
-            target_valence=target_valence,
-            target_arousal=target_arousal,
-            target_dominance=target_dominance,
         )
 
         return jsonify({
@@ -204,9 +200,7 @@ def generate_text_endpoint():
         goal = (data.get("goal") or "").strip()
         length = (data.get("length") or "short").strip()
         region = (data.get("region") or "UK").strip()
-        target_valence = data.get("target_valence")
-        target_arousal = data.get("target_arousal")
-        target_dominance = data.get("target_dominance")
+        campaign_id = data.get("campaign_id")
 
         result = generate_text_variants(
             business_name=business_name,
@@ -215,12 +209,10 @@ def generate_text_endpoint():
             tone=tone,
             platform=platform,
             description=description,
+            campaign_id=campaign_id,
             goal=goal,
             length=length,
             region=region,
-            target_valence=target_valence,
-            target_arousal=target_arousal,
-            target_dominance=target_dominance,
         )
 
         return jsonify({
