@@ -7,6 +7,13 @@ export default function DashboardHome() {
   const [savedTextItems, setSavedTextItems] = useState([]);
   const [savedAdItems, setSavedAdItems] = useState([]);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
+  const [businessName, setBusinessName] = useState(null);
+
+  useEffect(() => {
+    api.get("/api/business/profile")
+      .then((data) => setBusinessName(data.business_name || null))
+      .catch(() => setBusinessName(null));
+  }, []);
 
   const loadSavedItems = async () => {
     setIsLoadingSaved(true);
@@ -32,7 +39,9 @@ export default function DashboardHome() {
   return (
     <div className="pageStack">
       <div className="sectionCard">
-        <h3 style={{ marginTop: 0, marginBottom: 8 }}>Welcome to MarketMind</h3>
+        <h3 style={{ marginTop: 0, marginBottom: 8 }}>
+          Welcome back{businessName ? `, ${businessName}` : ""} 👋
+        </h3>
         <p className="muted" style={{ marginBottom: 14 }}>
           Start with generation, then use history and analytics to refine your brand voice.
         </p>

@@ -6,6 +6,7 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [userInfo, setUserInfo] = useState(null);
+  const [businessName, setBusinessName] = useState(null);
 
   const topbarTitle = {
     "/app": "Dashboard",
@@ -21,6 +22,9 @@ export default function DashboardLayout() {
     api.get("/auth/me")
       .then((data) => setUserInfo(data))
       .catch(() => setUserInfo(null));
+    api.get("/api/business/profile")
+      .then((data) => setBusinessName(data.business_name || null))
+      .catch(() => setBusinessName(null));
   }, [location.pathname]); // refresh on page change so deductions show up
 
   return (
@@ -29,6 +33,11 @@ export default function DashboardLayout() {
         <Link to="/" className="brand link" style={{ textDecoration: "none" }}>
           MarketMind
         </Link>
+        {businessName && (
+          <span style={{ fontSize: 12, color: "var(--muted, #888)", padding: "2px 0 8px 0", display: "block" }}>
+            {businessName}
+          </span>
+        )}
 
         <nav className="nav">
           <NavLink
