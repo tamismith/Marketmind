@@ -1,7 +1,9 @@
+from collections import Counter
 from typing import Dict, Optional
 
 from marketmind.extensions import db
 from marketmind.models.brand_memory import BrandMemory
+from marketmind.models.generated_content import GeneratedContent
 
 
 def get_brand_memory(user_id: int) -> Optional[Dict]:
@@ -50,7 +52,6 @@ def _extract_cta_hint(selected_text: str) -> str:
     if len(last) > 120:
         return last[:120]
     return last
-    return base_prompt
 
 
 def update_brand_memory_from_selection(
@@ -58,32 +59,81 @@ def update_brand_memory_from_selection(
     selected_text: str,
     context: Dict,
 ) -> Dict:
-    """Update and persist brand memory using selected variant + generation context."""
+    """
+    Update and persist brand memory by aggregating across the full selection
+    history for this user. Rather than overwriting with the most recent
+    selection, memory reflects the dominant pattern across all past choices —
+    building a brand language that improves with every interaction.
+    """
     memory = BrandMemory.query.filter_by(user_id=user_id).first()
     if not memory:
         memory = BrandMemory(user_id=user_id)
         db.session.add(memory)
 
-    tone = (context.get("tone") or "").strip() or None
-    platform = (context.get("platform") or "").strip() or None
-    region = (context.get("region") or "").strip() or None
+    # Fetch all selections this user has ever made, newest first
+    rows = (
+        GeneratedContent.query
+        .filter_by(user_id=user_id)
+        .filter(GeneratedContent.selected_variant.isnot(None))
+        .order_by(GeneratedContent.created_at.desc())
+        .all()
+    )
 
-    if tone:
-        memory.preferred_tone = tone
-    if platform:
-        memory.preferred_platform = platform
-    if region:
-        memory.preferred_region = region
+    # --- Tone: most common tone_key across all selected eval JSONs ---
+    tones = []
+    for row in rows:
+        eval_json = (
+            row.variant_a_eval_json if row.selected_variant == "A"
+            else row.variant_b_eval_json
+        )
+        tone = (eval_json or {}).get("tone")
+        if tone:
+            tones.append(tone)
 
-    memory.style_notes = selected_text[:400]
-    cta_hint = _extract_cta_hint(selected_text)
-    if cta_hint:
-        memory.cta_preferences = cta_hint
+    # --- Platform + Region: most common values from stored prompts ---
+    platforms, regions = [], []
+    for row in rows:
+        for line in (row.original_prompt or "").splitlines():
+            if ":" not in line:
+                continue
+            key, val = line.split(":", 1)
+            k = key.strip().lower()
+            if k == "platform":
+                platforms.append(val.strip())
+            elif k == "region":
+                regions.append(val.strip())
+
+    # --- Style notes + CTA: derived from 3 most recent selections ---
+    recent = rows[:3]
+    style_texts, cta_hints = [], []
+    for row in recent:
+        text = (
+            row.variant_a_text if row.selected_variant == "A"
+            else row.variant_b_text
+        ) or ""
+        if text:
+            style_texts.append(text[:200])
+            hint = _extract_cta_hint(text)
+            if hint:
+                cta_hints.append(hint)
+
+    # --- Write aggregated memory ---
+    if tones:
+        memory.preferred_tone = Counter(tones).most_common(1)[0][0]
+    if platforms:
+        memory.preferred_platform = Counter(platforms).most_common(1)[0][0]
+    if regions:
+        memory.preferred_region = Counter(regions).most_common(1)[0][0]
+    if style_texts:
+        memory.style_notes = " | ".join(style_texts)
+    if cta_hints:
+        memory.cta_preferences = Counter(cta_hints).most_common(1)[0][0]
 
     return {
         "user_id": user_id,
         "updated": True,
-        "reason": "Brand memory updated from selected variant.",
+        "reason": "Brand memory aggregated from full selection history.",
+        "selection_count": len(rows),
+        "dominant_tone": Counter(tones).most_common(1)[0][0] if tones else None,
         "selection_preview": selected_text[:120],
-        "context_keys": list(context.keys()),
     }
