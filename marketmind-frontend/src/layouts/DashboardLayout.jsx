@@ -12,7 +12,7 @@ export default function DashboardLayout() {
     "/app": "Dashboard",
     "/app/generate": "Generate",
     "/app/history": "History",
-    "/app/analytics": "Analytics",
+    "/app/analytics": "Campaign Analytics",
     "/app/plans": "Plans & Credits",
     "/app/brand": "Brand Profile",
     "/app/campaigns": "Campaigns",
@@ -74,7 +74,7 @@ export default function DashboardLayout() {
               isActive ? "navItem navItemActive" : "navItem"
             }
           >
-            Analytics
+            Campaign Analytics
           </NavLink>
 
           <NavLink

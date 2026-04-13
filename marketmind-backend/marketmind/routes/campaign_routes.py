@@ -7,6 +7,7 @@ from marketmind.controllers.campaign_controller import (
     create_campaign,
     update_campaign,
     delete_campaign,
+    get_campaign_analytics,
 )
 
 campaign_blueprint = Blueprint("campaigns", __name__)
@@ -52,6 +53,16 @@ def campaigns_update(campaign_id):
         return error_response("VALIDATION_ERROR", str(e), 400)
     except LookupError as e:
         return error_response("NOT_FOUND", str(e), 404)
+    except Exception:
+        return error_response("SERVER_ERROR", "Something went wrong", 500)
+
+
+@campaign_blueprint.route("/analytics", methods=["GET"])
+@jwt_required()
+def campaigns_analytics():
+    try:
+        result = get_campaign_analytics()
+        return jsonify(result), 200
     except Exception:
         return error_response("SERVER_ERROR", "Something went wrong", 500)
 

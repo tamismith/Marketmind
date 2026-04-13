@@ -1,30 +1,83 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
+  ResponsiveContainer,
 } from "recharts";
 
-const CHART_COLORS = {
-  positive: "#22c55e",
-  neutral: "#94a3b8",
-  negative: "#ef4444",
-  safe: "#0ea5a3",
-  balanced: "#38bdf8",
-  bold: "#f59e0b",
-  experimental: "#a78bfa",
-};
+function AccuracyBar({ value }) {
+  const color = value >= 70 ? "#22c55e" : value >= 40 ? "#f59e0b" : "#ef4444";
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+        <span style={{ fontSize: 12 }} className="muted">Brand Language Accuracy</span>
+        <strong style={{ fontSize: 13, color }}>{value}%</strong>
+      </div>
+      <div style={{ background: "#1a2436", borderRadius: 4, height: 8, overflow: "hidden" }}>
+        <div style={{ width: `${value}%`, height: "100%", background: color, borderRadius: 4, transition: "width 0.4s ease" }} />
+      </div>
+    </div>
+  );
+}
+
+function StatRow({ label, value }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: "1px solid #1a2436" }}>
+      <span className="muted" style={{ fontSize: 13 }}>{label}</span>
+      <strong style={{ fontSize: 13 }}>{value ?? "—"}</strong>
+    </div>
+  );
+}
+
+function VadRow({ avg_vad }) {
+  if (!avg_vad || (avg_vad.valence == null && avg_vad.arousal == null && avg_vad.dominance == null)) return null;
+  return (
+    <div style={{ marginTop: 8, fontSize: 12, display: "flex", gap: 14 }} className="muted">
+      {avg_vad.valence != null && <span>Valence: <strong style={{ color: "#e2e8f0" }}>{avg_vad.valence}</strong></span>}
+      {avg_vad.arousal != null && <span>Arousal: <strong style={{ color: "#e2e8f0" }}>{avg_vad.arousal}</strong></span>}
+      {avg_vad.dominance != null && <span>Dominance: <strong style={{ color: "#e2e8f0" }}>{avg_vad.dominance}</strong></span>}
+    </div>
+  );
+}
+
+function AccuracyTrend({ trend }) {
+  if (!trend || trend.length < 2) return null;
+  const data = trend.map((point, i) => ({
+    label: `#${i + 1}`,
+    accuracy: point.accuracy,
+  }));
+  return (
+    <div style={{ marginTop: 16 }}>
+      <p className="muted" style={{ fontSize: 12, marginBottom: 6 }}>Brand Language Accuracy Trend</p>
+      <ResponsiveContainer width="100%" height={120}>
+        <LineChart data={data} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+          <XAxis dataKey="label" tick={{ fontSize: 10, fill: "#64748b" }} />
+          <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#64748b" }} />
+          <Tooltip
+            contentStyle={{ background: "#111827", border: "1px solid #24314a", borderRadius: 6, fontSize: 12 }}
+            formatter={(val) => [`${val}%`, "Accuracy"]}
+          />
+          <Line
+            type="monotone"
+            dataKey="accuracy"
+            stroke="#0ea5a3"
+            strokeWidth={2}
+            dot={{ r: 3, fill: "#0ea5a3" }}
+            activeDot={{ r: 5 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
 
 export default function Analytics() {
+  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -33,7 +86,7 @@ export default function Analytics() {
     setErrorMessage("");
     setIsLoading(true);
     try {
-      const result = await api.get("/api/ai/analytics");
+      const result = await api.get("/api/campaigns/analytics");
       setData(result);
     } catch (error) {
       setErrorMessage(error.message || "Failed to load analytics.");
@@ -46,34 +99,8 @@ export default function Analytics() {
     loadAnalytics();
   }, []);
 
-  const imageUsage = data?.image_creativity_usage;
-  const imageCounts = imageUsage?.counts || {};
-  const imageSamples = imageUsage?.selected_samples ?? 0;
-
-  const weeklyToneData = useMemo(() => {
-    return (data?.weekly_tone_trend || []).map((w) => ({
-      week: w.week_start_date || w.week,
-      positive: w.positive || 0,
-      neutral: w.neutral || 0,
-      negative: w.negative || 0,
-    }));
-  }, [data]);
-
-  const regionData = useMemo(() => {
-    return (data?.regional_style_preference || []).map((r) => ({
-      region: r.region,
-      selected_count: r.selected_count || 0,
-    }));
-  }, [data]);
-
-  const creativityData = useMemo(() => {
-    return [
-      { name: "safe", value: imageCounts.safe || 0 },
-      { name: "balanced", value: imageCounts.balanced || 0 },
-      { name: "bold", value: imageCounts.bold || 0 },
-      { name: "experimental", value: imageCounts.experimental || 0 },
-    ];
-  }, [imageCounts]);
+  const summary = data?.summary;
+  const campaigns = data?.campaigns || [];
 
   return (
     <div className="pageStack">
@@ -85,78 +112,66 @@ export default function Analytics() {
       {isLoading ? <p className="muted">Loading analytics...</p> : null}
       {errorMessage ? <p className="statusError">{errorMessage}</p> : null}
 
-      {!isLoading && !errorMessage ? (
+      {!isLoading && !errorMessage && campaigns.length === 0 ? (
         <div className="sectionCard">
-          <h4 style={{ marginTop: 0 }}>Weekly Tone Trend </h4>
-          {weeklyToneData.length > 0 ? (
-            <div style={{ width: "100%", height: 300 }}>
-              <ResponsiveContainer>
-                <BarChart data={weeklyToneData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#24314a" />
-                  <XAxis dataKey="week" stroke="#9fb0cc" />
-                  <YAxis stroke="#9fb0cc" allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar dataKey="positive" stackId="tone" fill={CHART_COLORS.positive} />
-                  <Bar dataKey="neutral" stackId="tone" fill={CHART_COLORS.neutral} />
-                  <Bar dataKey="negative" stackId="tone" fill={CHART_COLORS.negative} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          ) : (
-            <p className="muted">No weekly tone chart data yet.</p>
-          )}
+          <p className="muted">No campaign data yet. Generate some content first.</p>
+          <button className="btn btnInline" style={{ marginTop: 10 }} onClick={() => navigate("/app/generate")}>
+            Generate Content
+          </button>
         </div>
       ) : null}
 
-      {!isLoading && !errorMessage ? (
+      {/* Summary cards */}
+      {!isLoading && summary && (
         <div className="gridCols2">
           <div className="sectionCard">
-            <h4 style={{ marginTop: 0 }}>Regional Preference </h4>
-            {regionData.length > 0 ? (
-              <div style={{ width: "100%", height: 300 }}>
-                <ResponsiveContainer>
-                  <BarChart data={regionData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#24314a" />
-                    <XAxis dataKey="region" stroke="#9fb0cc" />
-                    <YAxis stroke="#9fb0cc" allowDecimals={false} />
-                    <Tooltip />
-                    <Bar dataKey="selected_count" fill={CHART_COLORS.safe} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="muted">No regional chart data yet.</p>
+            <p className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Most Active Campaign</p>
+            <strong style={{ fontSize: 16 }}>{summary.most_active_campaign || "—"}</strong>
+          </div>
+          <div className="sectionCard">
+            <p className="muted" style={{ fontSize: 12, marginBottom: 4 }}>Highest Brand Language Accuracy</p>
+            <strong style={{ fontSize: 16 }}>
+              {summary.highest_accuracy_campaign
+                ? `${summary.highest_accuracy_campaign} — ${summary.highest_accuracy_value}%`
+                : "—"}
+            </strong>
+          </div>
+        </div>
+      )}
+
+      {/* Per campaign cards */}
+      {!isLoading && campaigns.map((campaign) => (
+        <div key={campaign.id} className="sectionCard">
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+            <h4 style={{ margin: 0 }}>{campaign.name}</h4>
+            {campaign.goal && (
+              <span className="muted" style={{ fontSize: 12 }}>— {campaign.goal}</span>
             )}
           </div>
 
-          <div className="sectionCard">
-            <h4 style={{ marginTop: 0 }}>Image Creativity Usage </h4>
-            {imageSamples > 0 ? (
-              <div style={{ width: "100%", height: 300 }}>
-                <ResponsiveContainer>
-                  <PieChart>
-                    <Tooltip />
-                    <Legend />
-                    <Pie
-                      data={creativityData}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={90}
-                    >
-                      {creativityData.map((entry) => (
-                        <Cell key={entry.name} fill={CHART_COLORS[entry.name]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-              <p className="muted">No image creativity chart data yet.</p>
-            )}
-          </div>
+          <StatRow label="Generations" value={campaign.generation_count} />
+          <StatRow label="Selection Rate" value={campaign.generation_count > 0 ? `${campaign.selection_rate}%` : "—"} />
+          <StatRow
+            label="Dominant Tone"
+            value={campaign.dominant_tone ? campaign.dominant_tone.replace(/_/g, " ") : "Not enough data"}
+          />
+
+          <VadRow avg_vad={campaign.avg_vad} />
+
+          {campaign.brand_language_accuracy != null ? (
+            <>
+              <AccuracyBar value={campaign.brand_language_accuracy} />
+              <AccuracyTrend trend={campaign.accuracy_trend} />
+            </>
+          ) : (
+            <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+              {campaign.target_valence == null && campaign.target_arousal == null && campaign.target_dominance == null
+                ? "Set VAD targets on this campaign to see brand language accuracy."
+                : "Select some variants to build accuracy data."}
+            </p>
+          )}
         </div>
-      ) : null}
+      ))}
     </div>
   );
 }
