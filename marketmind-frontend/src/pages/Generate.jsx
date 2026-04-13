@@ -240,6 +240,12 @@ export default function Generate() {
   const [showAdAdvanced, setShowAdAdvanced] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRegeneratingAd, setIsRegeneratingAd] = useState(false);
+  const [editedVariantA, setEditedVariantA] = useState("");
+  const [editedVariantB, setEditedVariantB] = useState("");
+  const [reEvalA, setReEvalA] = useState(null);
+  const [reEvalB, setReEvalB] = useState(null);
+  const [isReEvaluatingA, setIsReEvaluatingA] = useState(false);
+  const [isReEvaluatingB, setIsReEvaluatingB] = useState(false);
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
@@ -308,6 +314,10 @@ export default function Generate() {
       };
       const data = await api.post("/api/ai/generate/text", payload);
       setResult(data);
+      setEditedVariantA(data.variant_a || "");
+      setEditedVariantB(data.variant_b || "");
+      setReEvalA(null);
+      setReEvalB(null);
       setPendingTextSelection("");
     } catch (error) {
       setErrorMessage(error.message || "Failed to generate text.");
@@ -601,8 +611,33 @@ export default function Generate() {
         <div className="gridCols2">
           <div className="sectionCard">
             <h4 style={{ marginTop: 0 }}>Variant A</h4>
-            <p className="resultText">{result.variant_a}</p>
-            <EvalBlock evaluation={result.evaluation_a} />
+            <textarea
+              className="resultText"
+              style={{ width: "100%", minHeight: 100, resize: "vertical", background: "var(--card, #111827)", color: "inherit", border: "1px solid #24314a", borderRadius: 6, padding: 8, fontFamily: "inherit", fontSize: "inherit" }}
+              value={editedVariantA}
+              onChange={(e) => setEditedVariantA(e.target.value)}
+            />
+            <button
+              className="btnGhost btnInline"
+              style={{ marginTop: 6, fontSize: 12 }}
+              disabled={isReEvaluatingA}
+              onClick={async () => {
+                setIsReEvaluatingA(true);
+                try {
+                  const data = await api.post("/api/ai/evaluate", {
+                    text: editedVariantA,
+                    campaign_id: selectedCampaignId ? parseInt(selectedCampaignId) : null,
+                  });
+                  setReEvalA(data.evaluation);
+                } finally {
+                  setIsReEvaluatingA(false);
+                }
+              }}
+            >
+              {isReEvaluatingA ? "Evaluating..." : "Re-evaluate"}
+            </button>
+            <EvalBlock evaluation={reEvalA || result.evaluation_a} />
+            {reEvalA && <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>Showing re-evaluated scores</p>}
             <button
               className={pendingTextSelection === "A" ? "btn" : "btnGhost"}
               style={{ marginTop: 10, width: "100%" }}
@@ -614,8 +649,33 @@ export default function Generate() {
 
           <div className="sectionCard">
             <h4 style={{ marginTop: 0 }}>Variant B</h4>
-            <p className="resultText">{result.variant_b}</p>
-            <EvalBlock evaluation={result.evaluation_b} />
+            <textarea
+              className="resultText"
+              style={{ width: "100%", minHeight: 100, resize: "vertical", background: "var(--card, #111827)", color: "inherit", border: "1px solid #24314a", borderRadius: 6, padding: 8, fontFamily: "inherit", fontSize: "inherit" }}
+              value={editedVariantB}
+              onChange={(e) => setEditedVariantB(e.target.value)}
+            />
+            <button
+              className="btnGhost btnInline"
+              style={{ marginTop: 6, fontSize: 12 }}
+              disabled={isReEvaluatingB}
+              onClick={async () => {
+                setIsReEvaluatingB(true);
+                try {
+                  const data = await api.post("/api/ai/evaluate", {
+                    text: editedVariantB,
+                    campaign_id: selectedCampaignId ? parseInt(selectedCampaignId) : null,
+                  });
+                  setReEvalB(data.evaluation);
+                } finally {
+                  setIsReEvaluatingB(false);
+                }
+              }}
+            >
+              {isReEvaluatingB ? "Evaluating..." : "Re-evaluate"}
+            </button>
+            <EvalBlock evaluation={reEvalB || result.evaluation_b} />
+            {reEvalB && <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>Showing re-evaluated scores</p>}
             <button
               className={pendingTextSelection === "B" ? "btn" : "btnGhost"}
               style={{ marginTop: 10, width: "100%" }}

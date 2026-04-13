@@ -322,6 +322,27 @@ Region: {region}
     }
 
 
+def evaluate_text_only(text: str, campaign_id: int | None = None) -> dict:
+    user_id = int(get_jwt_identity())
+    campaign = Campaign.query.filter_by(id=campaign_id, user_id=user_id).first() if campaign_id else None
+    if campaign_id and not campaign:
+        raise LookupError("Campaign not found")
+
+    target_valence = campaign.target_valence if campaign else None
+    target_arousal = campaign.target_arousal if campaign else None
+    target_dominance = campaign.target_dominance if campaign else None
+
+    evaluation = evaluate_text(text)
+    alignment = _calculate_alignment(evaluation, target_valence, target_arousal, target_dominance)
+    if alignment:
+        evaluation["vad_alignment"] = alignment
+
+    return {
+        "evaluation": evaluation,
+        "campaign_id": campaign_id,
+    }
+
+
 def _parse_prompt_fields(prompt: str) -> dict:
     """
     Parse all key:value fields from a stored original_prompt string.

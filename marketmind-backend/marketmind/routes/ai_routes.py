@@ -11,6 +11,7 @@ from ..controllers.ai_controller import (
     select_ad_image,
     get_user_history,
     get_user_analytics,
+    evaluate_text_only,
 )
 from flask_jwt_extended import jwt_required
 from ..responses import error_response
@@ -416,6 +417,30 @@ def history_endpoint():
             "Something went wrong while fetching history",
             500,
         )
+
+
+@ai_blueprint.route("/evaluate", methods=["POST"])
+@jwt_required()
+def evaluate_endpoint():
+    try:
+        data = request.get_json(silent=True)
+        if not data:
+            return error_response("INVALID_REQUEST", "Request body must be JSON", 400)
+
+        text = (data.get("text") or "").strip()
+        campaign_id = data.get("campaign_id")
+
+        if not text:
+            return error_response("MISSING_FIELDS", "text is required", 400)
+
+        result = evaluate_text_only(text=text, campaign_id=campaign_id)
+        return jsonify(result), 200
+
+    except LookupError as e:
+        return error_response("NOT_FOUND", str(e), 404)
+    except Exception as e:
+        logger.error("EVALUATE ERROR: %s", e)
+        return error_response("SERVER_ERROR", "Something went wrong during evaluation", 500)
 
 
 @ai_blueprint.route("/analytics", methods=["GET"])
