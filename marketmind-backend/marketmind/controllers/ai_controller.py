@@ -618,6 +618,7 @@ def get_user_history(limit: int = 20) -> dict:
             "variant_b_text": row.variant_b_text,
             "evaluation_a": row.variant_a_eval_json,
             "evaluation_b": row.variant_b_eval_json,
+            "campaign_id": row.campaign_id,
         }
         if row.content_type == "ad_copy":
             ad_copy_items.append({
