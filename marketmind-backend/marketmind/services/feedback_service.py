@@ -28,10 +28,6 @@ def augment_prompt_with_memory(base_prompt: str, brand_memory: Optional[Dict]) -
     memory_lines = []
     if brand_memory.get("preferred_tone"):
         memory_lines.append(f"- Preferred tone: {brand_memory['preferred_tone']}")
-    if brand_memory.get("preferred_platform"):
-        memory_lines.append(f"- Preferred platform style: {brand_memory['preferred_platform']}")
-    if brand_memory.get("preferred_region"):
-        memory_lines.append(f"- Preferred region style: {brand_memory['preferred_region']}")
     if brand_memory.get("style_notes"):
         memory_lines.append(f"- Style notes: {brand_memory['style_notes']}")
     if brand_memory.get("cta_preferences"):
@@ -57,7 +53,6 @@ def _extract_cta_hint(selected_text: str) -> str:
 def update_brand_memory_from_selection(
     user_id: int,
     selected_text: str,
-    context: Dict,
 ) -> Dict:
     """
     Update and persist brand memory by aggregating across the full selection

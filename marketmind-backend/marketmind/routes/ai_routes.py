@@ -10,7 +10,6 @@ from ..controllers.ai_controller import (
     select_text_variant,
     select_ad_image,
     get_user_history,
-    get_user_analytics,
     evaluate_text_only,
 )
 from flask_jwt_extended import jwt_required
@@ -443,15 +442,3 @@ def evaluate_endpoint():
         return error_response("SERVER_ERROR", "Something went wrong during evaluation", 500)
 
 
-@ai_blueprint.route("/analytics", methods=["GET"])
-@jwt_required()
-def analytics_endpoint():
-    try:
-        result = get_user_analytics()
-        return jsonify(result), 200
-    except Exception:
-        return error_response(
-            "SERVER_ERROR",
-            "Something went wrong while fetching analytics",
-            500,
-        )

@@ -1,8 +1,6 @@
-from datetime import date
-
 from ..services.ai_service import generate_marketing_text, generate_ad_text
 from ..services.evaluation_service import evaluate_text, _calculate_alignment
-from ..services.feedback_service import update_brand_memory_from_selection
+from ..services.feedback_service import update_brand_memory_from_selection, get_brand_memory, augment_prompt_with_memory
 from flask_jwt_extended import get_jwt_identity
 from ..models.generated_content import GeneratedContent
 from ..models.user import User
@@ -121,7 +119,7 @@ def generate_ad_copy(
     include_keywords="",
     avoid_keywords="",
 ) -> dict:
-    
+
     user_id = int(get_jwt_identity())
     campaign = Campaign.query.filter_by(id=campaign_id, user_id=user_id).first() if campaign_id else None
     if campaign_id and not campaign:
@@ -164,7 +162,6 @@ def generate_ad_copy(
     alignment = _calculate_alignment(evaluation, target_valence, target_arousal, target_dominance)
     if alignment:
         evaluation["vad_alignment"] = alignment
-    user_id = int(get_jwt_identity())
 
     prompt_text = f"""
 Business: {business_name}
@@ -234,6 +231,9 @@ def generate_text_variants(
 
     vad_instruction = _vad_prompt_instruction(target_valence, target_arousal, target_dominance)
 
+    memory = get_brand_memory(user_id)
+    memory_instruction = augment_prompt_with_memory("", memory) if memory else ""
+
     angle_a = (
         "Creative brief for Variant A: emotional storytelling. "
         "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
@@ -256,7 +256,7 @@ def generate_text_variants(
         campaign_instruction=_campaign_prompt_instruction(
             campaign.name if campaign else "",
             campaign.goal if campaign else "",
-        ),
+        ) + memory_instruction,
     )
 
     variant_a = generate_marketing_text(description=f"{description} {angle_a}", **shared_kwargs)
@@ -357,7 +357,7 @@ def _parse_prompt_fields(prompt: str) -> dict:
     return fields
 
 
-def regenerate_text(content_id: int) -> dict:
+def regenerate_text(content_id: int, instruction: str = "") -> dict:
     """
     Re-generate both A/B text variants for an existing content row.
     Overwrites the row in-place and resets selected_variant.
@@ -381,14 +381,21 @@ def regenerate_text(content_id: int) -> dict:
     length           = f.get("length", "short")
     region           = f.get("region", "UK")
 
+    instruction_line = f"\nUser instruction: {instruction.strip()}" if instruction and instruction.strip() else ""
+
     angle_a = (
         "Creative brief for Variant A: emotional storytelling. "
         "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
+        + instruction_line
     )
     angle_b = (
         "Creative brief for Variant B: direct performance style. "
         "Lead with concrete value, include one specific benefit, and end with a clear action."
+        + instruction_line
     )
+
+    memory = get_brand_memory(user_id)
+    memory_instruction = augment_prompt_with_memory("", memory) if memory else ""
 
     shared_kwargs = dict(
         business_name=business_name,
@@ -399,6 +406,7 @@ def regenerate_text(content_id: int) -> dict:
         goal=goal,
         length=length,
         region=region,
+        campaign_instruction=memory_instruction,
     )
 
     variant_a = generate_marketing_text(description=f"{description} {angle_a}", **shared_kwargs)
@@ -512,21 +520,6 @@ def regenerate_ad_copy_text(content_id: int) -> dict:
     }
 
 
-def _extract_context_from_prompt(prompt: str) -> dict:
-    context: dict = {}
-    for line in prompt.splitlines():
-        if ":" not in line:
-            continue
-        key, value = line.split(":", 1)
-        key_normalized = key.strip().lower().replace(" ", "_")
-        context[key_normalized] = value.strip()
-    return {
-        "tone": context.get("tone", ""),
-        "platform": context.get("platform", ""),
-        "region": context.get("region", ""),
-    }
-
-
 def select_text_variant(content_id: int, selected_variant: str) -> dict:
     selected = selected_variant.strip().upper()
     if selected not in {"A", "B"}:
@@ -538,13 +531,11 @@ def select_text_variant(content_id: int, selected_variant: str) -> dict:
         raise LookupError("Content not found for this user")
 
     selected_text = content.variant_a_text if selected == "A" else content.variant_b_text
-    context = _extract_context_from_prompt(content.original_prompt)
 
     content.selected_variant = selected
     memory_result = update_brand_memory_from_selection(
         user_id=user_id,
         selected_text=selected_text,
-        context=context,
     )
 
     db.session.commit()
@@ -585,7 +576,6 @@ def get_user_history(limit: int = 20) -> dict:
     if limit <= 0:
         raise ValueError("limit must be greater than 0")
 
-    # Keep default responses lightweight for frontend usage.
     if limit > 100:
         limit = 100
 
@@ -633,135 +623,9 @@ def get_user_history(limit: int = 20) -> dict:
         "count": len(rows),
         "text_count": len(text_items),
         "ad_copy_count": len(ad_copy_items),
-        "items": text_items,  # compatibility for existing clients
+        "items": text_items,
         "text_items": text_items,
         "ad_copy_items": ad_copy_items,
     }
 
 
-def get_user_analytics() -> dict:
-    user_id = int(get_jwt_identity())
-    rows = GeneratedContent.query.filter_by(user_id=user_id).all()
-
-    selected_rows = [r for r in rows if (r.selected_variant or "").upper() in {"A", "B"}]
-
-    def selected_eval(row: GeneratedContent) -> dict:
-        return row.variant_a_eval_json if row.selected_variant == "A" else row.variant_b_eval_json
-
-    # 1) Best Brand Voice (most common selected tone)
-    tone_counts = {"positive": 0, "neutral": 0, "negative": 0}
-    for row in selected_rows:
-        tone = (selected_eval(row).get("tone_category") or "neutral").lower()
-        if tone not in tone_counts:
-            tone = "neutral"
-        tone_counts[tone] += 1
-
-    top_tone = max(tone_counts, key=tone_counts.get) if selected_rows else None
-
-    # VAD summary from selected outputs
-    vad_totals = {"valence": 0.0, "arousal": 0.0, "dominance": 0.0}
-    vad_samples = 0
-    for row in selected_rows:
-        vad = (selected_eval(row).get("vad") or {})
-        if not vad:
-            continue
-        vad_totals["valence"] += float(vad.get("valence", 0.0))
-        vad_totals["arousal"] += float(vad.get("arousal", 0.0))
-        vad_totals["dominance"] += float(vad.get("dominance", 0.0))
-        vad_samples += 1
-
-    if vad_samples > 0:
-        vad_summary = {
-            "avg_valence": round(vad_totals["valence"] / vad_samples, 4),
-            "avg_arousal": round(vad_totals["arousal"] / vad_samples, 4),
-            "avg_dominance": round(vad_totals["dominance"] / vad_samples, 4),
-            "sample_size": vad_samples,
-        }
-    else:
-        vad_summary = {
-            "avg_valence": 0.0,
-            "avg_arousal": 0.0,
-            "avg_dominance": 0.0,
-            "sample_size": 0,
-        }
-
-    # 2) Weekly Tone Trend (selected tones by ISO week)
-    weekly_map = {}
-    for row in selected_rows:
-        if not row.created_at:
-            continue
-        iso_year, iso_week, _ = row.created_at.isocalendar()
-        week_key = f"{iso_year}-W{iso_week:02d}"
-        week_start = date.fromisocalendar(iso_year, iso_week, 1)
-        week_end = date.fromisocalendar(iso_year, iso_week, 7)
-        week_entry = weekly_map.setdefault(
-            week_key,
-            {
-                "week": week_key,
-                "week_start_date": week_start.isoformat(),
-                "week_end_date": week_end.isoformat(),
-                "positive": 0,
-                "neutral": 0,
-                "negative": 0,
-                "selected_count": 0,
-            },
-        )
-        tone = (selected_eval(row).get("tone_category") or "neutral").lower()
-        if tone not in {"positive", "neutral", "negative"}:
-            tone = "neutral"
-        week_entry[tone] += 1
-        week_entry["selected_count"] += 1
-
-    weekly_tone_trend = [weekly_map[key] for key in sorted(weekly_map.keys())]
-
-    # 3) Regional Style Preference (region counts from selected records)
-    region_counts = {}
-    for row in selected_rows:
-        context = _extract_context_from_prompt(row.original_prompt)
-        region = (context.get("region") or "Unknown").strip()
-        region_counts[region] = region_counts.get(region, 0) + 1
-
-    regional_style_preference = [
-        {"region": region, "selected_count": count}
-        for region, count in sorted(region_counts.items(), key=lambda item: item[1], reverse=True)
-    ]
-
-    # 4) Image creativity usage (from saved ad image selections)
-    creativity_counts = {
-        "safe": 0,
-        "balanced": 0,
-        "bold": 0,
-        "experimental": 0,
-    }
-    creativity_samples = 0
-    for row in rows:
-        if row.content_type != "ad_copy":
-            continue
-        creativity_level = (row.selected_image_option_id or "").strip().lower()
-        if not creativity_level:
-            continue
-        if creativity_level not in creativity_counts:
-            continue
-        creativity_counts[creativity_level] += 1
-        creativity_samples += 1
-
-    if creativity_samples > 0:
-        top_creativity_level = max(creativity_counts, key=creativity_counts.get)
-    else:
-        top_creativity_level = None
-
-    return {
-        "best_brand_voice": {
-            "top_tone": top_tone,
-            "tone_counts": tone_counts,
-            "selected_samples": len(selected_rows),
-        },
-        "vad_summary": vad_summary,
-        "weekly_tone_trend": weekly_tone_trend,
-        "regional_style_preference": regional_style_preference,
-        "image_creativity_usage": {
-            "top_creativity_level": top_creativity_level,
-            "counts": creativity_counts,
-            "selected_samples": creativity_samples,
-        },
-    }
