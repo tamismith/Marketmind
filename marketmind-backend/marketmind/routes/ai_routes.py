@@ -24,7 +24,6 @@ REQUIRED_FIELDS = [
     "business_name",
     "industry",
     "target_audience",
-    "tone",
     "platform",
     "description"
 ]
@@ -64,7 +63,7 @@ def ad_copy_endpoint():
         business_name = data["business_name"].strip()
         industry = data["industry"].strip()
         target_audience = data["target_audience"].strip()
-        tone = data["tone"].strip()
+        tone = (data.get("tone") or "").strip()
         platform = data["platform"].strip()
         description = data["description"].strip()
 
@@ -193,7 +192,7 @@ def generate_text_endpoint():
         business_name = data["business_name"].strip()
         industry = data["industry"].strip()
         target_audience = data["target_audience"].strip()
-        tone = data["tone"].strip()
+        tone = (data.get("tone") or "").strip()
         platform = data["platform"].strip()
         description = data["description"].strip()
 

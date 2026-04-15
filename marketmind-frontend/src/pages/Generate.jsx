@@ -684,7 +684,7 @@ export default function Generate() {
             <input className="input" name="description" placeholder="Description" value={adForm.description} onChange={onAdChange} required />
 
             <div className="formGrid4">
-              <input className="input" name="tone" placeholder="Tone" value={adForm.tone} onChange={onAdChange} required />
+              <input className="input" name="tone" placeholder="Tone (optional if campaign VAD set)" value={adForm.tone} onChange={onAdChange} />
               <input className="input" name="platform" placeholder="Platform" value={adForm.platform} onChange={onAdChange} required />
             </div>
 
