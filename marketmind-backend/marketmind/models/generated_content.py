@@ -10,6 +10,7 @@ class GeneratedContent(db.Model):
     content_type = db.Column(db.String(20), nullable=False, default="text")
 
     original_prompt = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=True)
     variant_a_text = db.Column(db.Text, nullable=False)
     variant_b_text = db.Column(db.Text, nullable=False)
     variant_a_eval_json = db.Column(db.JSON, nullable=False)

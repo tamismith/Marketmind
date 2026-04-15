@@ -208,6 +208,9 @@ export default function History() {
                 )}
               </div>
             </div>
+            {item.description ? (
+              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 6 }}>{item.description}</p>
+            ) : null}
             <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
               <VariantCard
                 label="Variant A"
@@ -238,6 +241,9 @@ export default function History() {
                 <span className="pill" style={{ fontSize: 11 }}>{campaignName}</span>
               )}
             </div>
+            {item.description ? (
+              <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 6 }}>{item.description}</p>
+            ) : null}
             <div style={{ marginTop: 10 }}>
               {item.selected_image_base64 ? (
                 <button
