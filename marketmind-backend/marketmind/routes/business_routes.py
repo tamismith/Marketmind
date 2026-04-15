@@ -19,6 +19,7 @@ def profile_get():
     return jsonify(result), 200
 
 
+
 @business_blueprint.route("/profile", methods=["PUT"])
 @jwt_required()
 def profile_update():

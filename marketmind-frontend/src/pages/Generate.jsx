@@ -226,7 +226,6 @@ export default function Generate() {
   const [adForm, setAdForm] = useState(initialAdForm);
   const [adResult, setAdResult] = useState(null);
   const [selectedAdImageId, setSelectedAdImageId] = useState("");
-  const [memoryPreview, setMemoryPreview] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAdGenerating, setIsAdGenerating] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -240,6 +239,7 @@ export default function Generate() {
   const [showAdAdvanced, setShowAdAdvanced] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [isRegeneratingAd, setIsRegeneratingAd] = useState(false);
+  const [regenInstruction, setRegenInstruction] = useState("");
   const [editedVariantA, setEditedVariantA] = useState("");
   const [editedVariantB, setEditedVariantB] = useState("");
   const [reEvalA, setReEvalA] = useState(null);
@@ -251,29 +251,8 @@ export default function Generate() {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
 
-  const loadMemoryPreview = async () => {
-    try {
-      const analytics = await api.get("/api/ai/analytics");
-      const topTone = analytics?.best_brand_voice?.top_tone;
-      const selectedSamples = analytics?.best_brand_voice?.selected_samples ?? 0;
-      const topRegion = analytics?.regional_style_preference?.[0]?.region || null;
-      const latestWeek = analytics?.weekly_tone_trend?.length
-        ? analytics.weekly_tone_trend[analytics.weekly_tone_trend.length - 1]
-        : null;
-
-      setMemoryPreview({
-        topTone,
-        selectedSamples,
-        topRegion,
-        latestWeek,
-      });
-    } catch {
-      setMemoryPreview(null);
-    }
-  };
 
   useEffect(() => {
-    loadMemoryPreview();
     api.get("/api/business/profile")
       .then((data) => setProfile(data))
       .catch(() => setProfile(null))
@@ -341,7 +320,6 @@ export default function Generate() {
       setSuccessMessage(
         `Variant ${pendingTextSelection} saved. You can now track it in History and Dashboard.`,
       );
-      await loadMemoryPreview();
     } catch (error) {
       setErrorMessage(error.message || "Failed to save selection.");
     } finally {
@@ -384,7 +362,7 @@ export default function Generate() {
     setSuccessMessage("");
     setIsRegenerating(true);
     try {
-      const data = await api.post("/api/ai/regenerate/text", { content_id: result.content_id });
+      const data = await api.post("/api/ai/regenerate/text", { content_id: result.content_id, instruction: regenInstruction });
       setResult((prev) => ({ ...prev, ...data }));
       setPendingTextSelection("");
     } catch (error) {
@@ -520,7 +498,7 @@ export default function Generate() {
             <input className="input" name="description" placeholder="Description" value={form.description} onChange={onChange} required />
 
             <div className="formGrid4">
-              <input className="input" name="tone" placeholder="Tone" value={form.tone} onChange={onChange} required />
+              <input className="input" name="tone" placeholder="Tone (optional if campaign VAD set)" value={form.tone} onChange={onChange} />
               <input className="input" name="platform" placeholder="Platform" value={form.platform} onChange={onChange} required />
             </div>
 
@@ -567,45 +545,6 @@ export default function Generate() {
         </div>
       ) : null}
 
-      {activeMode === "text" ? (
-        <div className="sectionCard">
-          <h4 style={{ marginTop: 0, marginBottom: 8 }}>Brand Memory Preview</h4>
-          {memoryPreview ? (
-            <div style={{ display: "grid", gap: 6 }} className="muted">
-              <div>
-                Preferred voice so far:{" "}
-                <strong className="evalTitle">
-                  {memoryPreview.topTone || "Not enough data yet"}
-                </strong>
-              </div>
-              <div>
-                Most selected region style:{" "}
-                <strong className="evalTitle">
-                  {memoryPreview.topRegion || "Not enough data yet"}
-                </strong>
-              </div>
-              <div>
-                Selections learned from:{" "}
-                <strong className="evalTitle">
-                  {memoryPreview.selectedSamples}
-                </strong>
-              </div>
-              {memoryPreview.latestWeek ? (
-                <div>
-                  Latest active week:{" "}
-                  <strong className="evalTitle">
-                    {memoryPreview.latestWeek.week_start_date} to {memoryPreview.latestWeek.week_end_date}
-                  </strong>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="muted">
-              No memory insights yet. Select a few variants to build preferences.
-            </p>
-          )}
-        </div>
-      ) : null}
 
       {activeMode === "text" && result ? (
         <div className="gridCols2">
@@ -700,6 +639,16 @@ export default function Generate() {
                 {pendingTextSelection ? `Variant ${pendingTextSelection}` : "None yet"}
               </strong>
             </span>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <input
+              type="text"
+              className="input"
+              placeholder='Regeneration instruction e.g. "make it more urgent"'
+              value={regenInstruction}
+              onChange={(e) => setRegenInstruction(e.target.value)}
+              style={{ width: "100%" }}
+            />
           </div>
           <div className="actionRow" style={{ marginTop: 10 }}>
             <button

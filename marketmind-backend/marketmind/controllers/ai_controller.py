@@ -209,9 +209,9 @@ def generate_text_variants(
     business_name: str,
     industry: str,
     target_audience: str,
-    tone: str,
     platform: str,
     description: str,
+    tone: str = "",
     campaign_id: int | None = None,
     goal: str = "",
     region: str = "UK",
@@ -230,6 +230,8 @@ def generate_text_variants(
     target_dominance = campaign.target_dominance if campaign else None
 
     vad_instruction = _vad_prompt_instruction(target_valence, target_arousal, target_dominance)
+    # Use tone as fallback only if no VAD targets are set
+    effective_tone = tone if not vad_instruction else ""
 
     memory = get_brand_memory(user_id)
     memory_instruction = augment_prompt_with_memory("", memory) if memory else ""
@@ -247,7 +249,7 @@ def generate_text_variants(
         business_name=business_name,
         industry=industry,
         target_audience=target_audience,
-        tone=tone,
+        tone=effective_tone,
         platform=platform,
         goal=goal,
         length=length,

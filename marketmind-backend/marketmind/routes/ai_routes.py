@@ -259,7 +259,8 @@ def regenerate_text_endpoint():
                 {"missing_fields": ["content_id"]},
             )
 
-        result = regenerate_text(content_id=int(content_id))
+        instruction = data.get("instruction", "")
+        result = regenerate_text(content_id=int(content_id), instruction=instruction)
         return jsonify(result), 200
 
     except ValueError as e:
