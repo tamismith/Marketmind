@@ -10,6 +10,7 @@ class BrandMemory(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, unique=True)
 
     preferred_tone = db.Column(db.String(80), nullable=True)
+    preferred_creativity = db.Column(db.Float, nullable=True, default=0.5)
     preferred_platform = db.Column(db.String(80), nullable=True)
     preferred_region = db.Column(db.String(80), nullable=True)
     style_notes = db.Column(db.Text, nullable=True)

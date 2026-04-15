@@ -17,6 +17,7 @@ def get_brand_memory(user_id: int) -> Optional[Dict]:
         "preferred_region": memory.preferred_region,
         "style_notes": memory.style_notes,
         "cta_preferences": memory.cta_preferences,
+        "preferred_creativity": memory.preferred_creativity if memory.preferred_creativity is not None else 0.5,
     }
 
 
@@ -111,6 +112,13 @@ def update_brand_memory_from_selection(
             hint = _extract_cta_hint(text)
             if hint:
                 cta_hints.append(hint)
+
+    # --- Preferred creativity: ratio of A picks to total ---
+    a_count = sum(1 for row in rows if row.selected_variant == "A")
+    b_count = sum(1 for row in rows if row.selected_variant == "B")
+    total = a_count + b_count
+    if total > 0:
+        memory.preferred_creativity = a_count / total
 
     # --- Write aggregated memory ---
     if tones:

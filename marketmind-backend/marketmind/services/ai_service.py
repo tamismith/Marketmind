@@ -339,6 +339,7 @@ def generate_marketing_text(
     length: str = "short",
     vad_instruction: str = "",
     campaign_instruction: str = "",
+    temperature: float = 0.7,
 ) -> str:
     length_instruction = {
         "short": "1-2 sentences",
@@ -406,7 +407,7 @@ Return only the final caption text. No labels, bullets, or quotes.
             system_prompt="You help small businesses create marketing content.",
             user_prompt=prompt,
             max_tokens=150,
-            temperature=0.7,
+            temperature=temperature,
         )
         return ai_provider.generate_text(request)
     except AIProviderError as e:
