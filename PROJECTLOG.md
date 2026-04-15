@@ -438,3 +438,81 @@ Refactoring the Generate forms improved the experience for first-time users cons
 - Implement VAD target sliders so users can specify a desired emotional tone and receive an alignment score.
 - Build the Regenerate endpoint to allow guided revision of existing outputs.
 - Implement the BusinessProfile and Campaign database models as the foundation for brand-aware generation and campaign analytics.
+
+## Week 13 — 31/03/26–14/04/26
+
+### Summary of Work
+This period focused on introducing the business profile and campaign systems, closing the human-in-the-loop feedback loop, and significantly upgrading the analytics, history, and generate pages. The brand memory aggregation was rewritten, campaign-level analytics were introduced, VAD emotional targeting was added, and several usability improvements were made across the application.
+
+---
+
+### Progress Made
+
+#### Business Profile & Brand System
+- Implemented the `BusinessProfile` model, migration, and CRUD routes.
+- Built the Brand Profile page allowing users to store business name, industry, target audience, and region.
+- Generate form now pre-fills from the stored business profile, removing repeated manual input.
+- Added logo generation per business profile using the existing image pipeline.
+- Added business name greeting to the dashboard and sidebar using brand profile data.
+
+#### Campaign Management
+- Introduced the `Campaign` model with name, goal, and VAD target fields (valence, arousal, dominance).
+- Built campaign creation, editing, and deletion with VAD target sliders and a toggle to enable emotional targeting.
+- Generated content is now linked to a campaign via `campaign_id`.
+- Campaign name and goal are injected into generation prompts as contextual instructions.
+
+#### VAD Emotional Targeting
+- Added VAD target sliders to the campaign edit and create forms.
+- Campaign VAD targets are retrieved during generation and converted to natural language instructions injected into the prompt.
+- Alignment score calculated per generation comparing output VAD scores against campaign targets.
+- Made tone field optional — when a campaign has VAD targets set, tone is ignored and VAD drives the emotional direction.
+
+#### Brand Memory Aggregation
+- Rewrote `update_brand_memory_from_selection` to aggregate preferences from the full selection history using `Counter`-based pattern matching rather than overwriting on each selection.
+- Brand memory now reflects the dominant tone, platform, and region across all past selections, and derives style notes and CTA preferences from the 3 most recent selections.
+- Brand memory is now injected into both text generation and regeneration prompts, closing the human-in-the-loop feedback loop.
+- Removed unused `context` parameter and dead code left over from the previous implementation.
+
+#### AI Provider Reliability
+- Added retry logic with delay to both OpenAI text generation and Stability AI image generation.
+- Added `timeout=15` to OpenAI API calls to prevent indefinite hangs.
+- Retries handle connection errors and 5xx responses; 4xx errors fail immediately without retrying.
+
+#### Regeneration
+- Added `POST /api/ai/regenerate/text` and `POST /api/ai/regenerate/ad-copy` endpoints.
+- Regenerate re-uses stored prompt fields and overwrites the existing content row in place.
+- Costs 1 credit per regeneration.
+
+#### Generate Page
+- Added edit and re-evaluate feature — users can manually edit variant text and re-score it against campaign VAD targets without spending credits.
+- Added regeneration instruction input field below generated variants.
+
+#### History Page
+- Rewrote History page with collapsible `VariantCard` components.
+- Selected variants display a teal border and "Selected" badge.
+- Added copy buttons, full VAD score display, and campaign name pills.
+- Added campaign filter dropdown to filter history by campaign.
+
+#### Campaign Analytics
+- Replaced old tone/region/creativity charts with per-campaign analytics.
+- Metrics per campaign: generation count, selection rate, dominant tone, average VAD scores, and brand language accuracy.
+- Brand language accuracy measures how closely selected content aligns with campaign VAD targets, shown as a colour-coded progress bar.
+- Added brand language accuracy trend line chart showing accuracy per selection over time.
+- Summary cards show most active and highest accuracy campaigns.
+- Backed by new `GET /api/campaigns/analytics` endpoint.
+
+#### Code Quality
+- Removed dead `GET /api/ai/analytics` endpoint and `get_user_analytics` controller function.
+- Removed `_extract_context_from_prompt` helper no longer needed after analytics refactor.
+
+---
+
+### Reflection
+This period brought the most significant technical and usability improvements to the system. Rewriting brand memory aggregation properly closed the human-in-the-loop feedback loop — selections now have a measurable cumulative effect on future generations. Campaign analytics gave the system a clear evaluation layer that directly supports dissertation objectives around brand language alignment and output quality measurement. Introducing VAD emotional targeting at the campaign level added a second dimension of personalisation beyond brand voice, allowing users to specify desired emotional outputs and measure how closely generated content achieves them. The history and generate page improvements address real usability gaps identified through self-testing.
+
+---
+
+### Next Steps
+- Implement `preferred_creativity` field in brand memory to track whether users prefer reliable or creative outputs and adapt generation temperature accordingly.
+- Add low credits warning when balance drops below a threshold.
+- Build demo seed profiles (GlowSkin and FinTrust) with pre-populated history and brand memory to demonstrate brand voice divergence during the dissertation demo.
