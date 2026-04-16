@@ -3,7 +3,19 @@ from collections import Counter
 from flask_jwt_extended import get_jwt_identity
 from ..models.campaign import Campaign
 from ..models.generated_content import GeneratedContent
+from ..services.feedback_service import get_brand_memory
 from marketmind.extensions import db
+
+
+def _vad_label(valence, arousal, dominance):
+    parts = []
+    if valence is not None:
+        parts.append("Positive" if valence >= 0.05 else "Negative" if valence <= -0.05 else "Neutral")
+    if arousal is not None:
+        parts.append("High Energy" if arousal >= 0.6 else "Low Energy" if arousal < 0.35 else "Moderate Energy")
+    if dominance is not None:
+        parts.append("Assertive" if dominance >= 0.6 else "Tentative" if dominance < 0.4 else "Balanced")
+    return " · ".join(parts) if parts else None
 
 
 def _serialise(c: Campaign) -> dict:
@@ -149,17 +161,20 @@ def get_campaign_analytics() -> dict:
         })
 
     most_active = max(results, key=lambda x: x["generation_count"], default=None)
-    highest_accuracy = max(
-        [r for r in results if r["brand_language_accuracy"] is not None],
-        key=lambda x: x["brand_language_accuracy"],
-        default=None,
-    )
+
+    memory = get_brand_memory(user_id)
+    selection_count = (memory or {}).get("selection_count", 0)
+    learned_label = _vad_label(
+        (memory or {}).get("learned_valence"),
+        (memory or {}).get("learned_arousal"),
+        (memory or {}).get("learned_dominance"),
+    ) if memory else None
 
     return {
         "campaigns": results,
         "summary": {
             "most_active_campaign": most_active["name"] if most_active else None,
-            "highest_accuracy_campaign": highest_accuracy["name"] if highest_accuracy else None,
-            "highest_accuracy_value": highest_accuracy["brand_language_accuracy"] if highest_accuracy else None,
+            "selection_count": selection_count,
+            "learned_vad_label": learned_label,
         },
     }
