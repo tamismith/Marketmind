@@ -238,8 +238,21 @@ def generate_text_variants(
     memory_instruction = augment_prompt_with_memory("", memory) if memory else ""
 
     creativity = (memory or {}).get("preferred_creativity") or 0.5
-    temp_a = round(0.5 + (creativity * 0.4), 2)
-    temp_b = round(0.9 - (creativity * 0.4), 2)
+
+    # Temperature — VAD arousal target takes priority, else use preferred_creativity
+    if target_arousal is not None:
+        temp_a = round(0.5 + (target_arousal * 0.4), 2)
+        temp_b = round(0.5 + (target_arousal * 0.4), 2)
+    else:
+        temp_a = round(0.5 + (creativity * 0.4), 2)
+        temp_b = round(0.9 - (creativity * 0.4), 2)
+
+    # top_p from arousal
+    top_p = round(0.7 + (target_arousal * 0.3), 2) if target_arousal is not None else 1.0
+
+    # frequency and presence penalty from dominance
+    freq_penalty = round(target_dominance * 0.5, 2) if target_dominance is not None else 0.0
+    pres_penalty = round(target_dominance * 0.5, 2) if target_dominance is not None else 0.0
 
     angle_a = (
         "Creative brief for Variant A: emotional storytelling. "
@@ -266,8 +279,8 @@ def generate_text_variants(
         ) + memory_instruction,
     )
 
-    variant_a = generate_marketing_text(description=f"{description} {angle_a}", temperature=temp_a, **shared_kwargs)
-    variant_b = generate_marketing_text(description=f"{description} {angle_b}", temperature=temp_b, **shared_kwargs)
+    variant_a = generate_marketing_text(description=f"{description} {angle_a}", temperature=temp_a, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
+    variant_b = generate_marketing_text(description=f"{description} {angle_b}", temperature=temp_b, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
 
     # If outputs are too close, force a sharper second style split for B.
     if variant_a.strip().lower() == variant_b.strip().lower():
@@ -275,7 +288,7 @@ def generate_text_variants(
             "Creative brief for Variant B: concise, punchy, and utility-first. "
             "Use different wording from any storytelling style and focus on one measurable outcome."
         )
-        variant_b = generate_marketing_text(description=f"{description} {fallback_b}", temperature=temp_b, **shared_kwargs)
+        variant_b = generate_marketing_text(description=f"{description} {fallback_b}", temperature=temp_b, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
 
     if not variant_a or not variant_a.strip():
         raise ValueError("AI returned empty output for variant A")

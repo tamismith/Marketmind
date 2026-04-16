@@ -16,6 +16,9 @@ class TextGenerationRequest:
     model: str = "gpt-4o-mini"
     max_tokens: int = 180
     temperature: float = 0.7
+    top_p: float = 1.0
+    frequency_penalty: float = 0.0
+    presence_penalty: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -52,6 +55,9 @@ class AIProvider:
                     ],
                     max_tokens=request.max_tokens,
                     temperature=request.temperature,
+                    top_p=request.top_p,
+                    frequency_penalty=request.frequency_penalty,
+                    presence_penalty=request.presence_penalty,
                     timeout=15,
                 )
                 content = (response.choices[0].message.content or "").strip()
