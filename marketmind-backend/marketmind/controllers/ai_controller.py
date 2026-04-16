@@ -217,6 +217,7 @@ def generate_text_variants(
     goal: str = "",
     region: str = "UK",
     length: str = "short",
+    generation_mode: str = "vad_driven",
 ) -> dict:
     """
     Generate two distinct text variants, evaluate both, and persist them.
@@ -230,29 +231,43 @@ def generate_text_variants(
     target_arousal = campaign.target_arousal if campaign else None
     target_dominance = campaign.target_dominance if campaign else None
 
-    vad_instruction = _vad_prompt_instruction(target_valence, target_arousal, target_dominance)
-    # Use tone as fallback only if no VAD targets are set
-    effective_tone = tone if not vad_instruction else ""
-
     memory = get_brand_memory(user_id)
     memory_instruction = augment_prompt_with_memory("", memory) if memory else ""
 
-    creativity = (memory or {}).get("preferred_creativity") or 0.5
-
-    # Temperature — VAD arousal target takes priority, else use preferred_creativity
-    if target_arousal is not None:
-        temp_a = round(0.5 + (target_arousal * 0.4), 2)
-        temp_b = round(0.5 + (target_arousal * 0.4), 2)
+    # Resolve VAD source based on generation mode
+    HISTORY_THRESHOLD = 5
+    if generation_mode == "history_driven" and memory and (memory.get("selection_count") or 0) >= HISTORY_THRESHOLD:
+        eff_arousal = memory.get("learned_arousal")
+        eff_dominance = memory.get("learned_dominance")
+        eff_valence = memory.get("learned_valence")
+    elif generation_mode == "history_driven":
+        # Not enough history yet — fall to base parameters
+        eff_arousal = None
+        eff_dominance = None
+        eff_valence = None
     else:
-        temp_a = round(0.5 + (creativity * 0.4), 2)
-        temp_b = round(0.9 - (creativity * 0.4), 2)
+        eff_arousal = target_arousal
+        eff_dominance = target_dominance
+        eff_valence = target_valence
 
-    # top_p from arousal
-    top_p = round(0.7 + (target_arousal * 0.3), 2) if target_arousal is not None else 1.0
+    # Rebuild VAD instruction using effective values
+    vad_instruction = _vad_prompt_instruction(eff_valence, eff_arousal, eff_dominance)
+    effective_tone = tone if not vad_instruction else ""
 
-    # frequency and presence penalty from dominance
-    freq_penalty = round(target_dominance * 0.5, 2) if target_dominance is not None else 0.0
-    pres_penalty = round(target_dominance * 0.5, 2) if target_dominance is not None else 0.0
+    # Temperature — from eff_arousal if available, else neutral base
+    if eff_arousal is not None:
+        temp_a = round(0.5 + (eff_arousal * 0.4), 2)
+        temp_b = round(0.5 + (eff_arousal * 0.4), 2)
+    else:
+        temp_a = 0.7
+        temp_b = 0.7
+
+    # top_p — from eff_arousal if available, else neutral base
+    top_p = round(0.7 + (eff_arousal * 0.3), 2) if eff_arousal is not None else 0.85
+
+    # frequency and presence penalty — from eff_dominance if available, else neutral base
+    freq_penalty = round(eff_dominance * 0.5, 2) if eff_dominance is not None else 0.1
+    pres_penalty = round(eff_dominance * 0.5, 2) if eff_dominance is not None else 0.1
 
     angle_a = (
         "Creative brief for Variant A: emotional storytelling. "
@@ -298,8 +313,8 @@ def generate_text_variants(
     eval_a = evaluate_text(variant_a)
     eval_b = evaluate_text(variant_b)
 
-    alignment_a = _calculate_alignment(eval_a, target_valence, target_arousal, target_dominance)
-    alignment_b = _calculate_alignment(eval_b, target_valence, target_arousal, target_dominance)
+    alignment_a = _calculate_alignment(eval_a, eff_valence, eff_arousal, eff_dominance)
+    alignment_b = _calculate_alignment(eval_b, eff_valence, eff_arousal, eff_dominance)
     if alignment_a:
         eval_a["vad_alignment"] = alignment_a
     if alignment_b:

@@ -16,4 +16,9 @@ class BrandMemory(db.Model):
     style_notes = db.Column(db.Text, nullable=True)
     cta_preferences = db.Column(db.Text, nullable=True)
 
+    learned_valence = db.Column(db.Float, nullable=True)
+    learned_arousal = db.Column(db.Float, nullable=True)
+    learned_dominance = db.Column(db.Float, nullable=True)
+    selection_count = db.Column(db.Integer, nullable=True, default=0)
+
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

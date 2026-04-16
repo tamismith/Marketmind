@@ -250,6 +250,7 @@ export default function Generate() {
   const [profileLoading, setProfileLoading] = useState(true);
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState("");
+  const [generationMode, setGenerationMode] = useState("vad_driven");
 
 
   useEffect(() => {
@@ -290,6 +291,7 @@ export default function Generate() {
         target_audience: profile?.target_audience || "",
         region: form.region || profile?.region || "",
         campaign_id: selectedCampaignId ? parseInt(selectedCampaignId) : null,
+        generation_mode: generationMode,
       };
       const data = await api.post("/api/ai/generate/text", payload);
       setResult(data);
@@ -475,6 +477,32 @@ export default function Generate() {
           </div>
         );
       })()}
+
+      {/* Generation mode toggle */}
+      <div className="sectionCard" style={{ padding: "10px 14px" }}>
+        <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>Generation Mode</p>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            className={generationMode === "vad_driven" ? "btn btnInline" : "btnGhost btnInline"}
+            onClick={() => setGenerationMode("vad_driven")}
+            style={{ fontSize: 13 }}
+          >
+            VAD-Driven
+          </button>
+          <button
+            className={generationMode === "history_driven" ? "btn btnInline" : "btnGhost btnInline"}
+            onClick={() => setGenerationMode("history_driven")}
+            style={{ fontSize: 13 }}
+          >
+            History-Driven
+          </button>
+        </div>
+        <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+          {generationMode === "vad_driven"
+            ? "Uses your campaign's emotional targets to guide generation."
+            : "Learns from your selection history to adapt generation automatically."}
+        </p>
+      </div>
 
       <div className="actionRow">
         <button

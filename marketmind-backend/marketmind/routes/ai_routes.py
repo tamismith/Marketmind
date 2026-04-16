@@ -200,6 +200,7 @@ def generate_text_endpoint():
         length = (data.get("length") or "short").strip()
         region = (data.get("region") or "UK").strip()
         campaign_id = data.get("campaign_id")
+        generation_mode = (data.get("generation_mode") or "vad_driven").strip()
 
         result = generate_text_variants(
             business_name=business_name,
@@ -212,6 +213,7 @@ def generate_text_endpoint():
             goal=goal,
             length=length,
             region=region,
+            generation_mode=generation_mode,
         )
 
         return jsonify({

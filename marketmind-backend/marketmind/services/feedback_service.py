@@ -18,6 +18,10 @@ def get_brand_memory(user_id: int) -> Optional[Dict]:
         "style_notes": memory.style_notes,
         "cta_preferences": memory.cta_preferences,
         "preferred_creativity": memory.preferred_creativity if memory.preferred_creativity is not None else 0.5,
+        "learned_valence": memory.learned_valence,
+        "learned_arousal": memory.learned_arousal,
+        "learned_dominance": memory.learned_dominance,
+        "selection_count": memory.selection_count or 0,
     }
 
 
@@ -119,6 +123,27 @@ def update_brand_memory_from_selection(
     total = a_count + b_count
     if total > 0:
         memory.preferred_creativity = a_count / total
+
+    # --- Learned VAD: average VAD scores across all selected variants ---
+    valences, arousals, dominances = [], [], []
+    for row in rows:
+        eval_json = row.variant_a_eval_json if row.selected_variant == "A" else row.variant_b_eval_json
+        vad = (eval_json or {}).get("vad") or {}
+        if vad.get("valence") is not None:
+            valences.append(float(vad["valence"]))
+        if vad.get("arousal") is not None:
+            arousals.append(float(vad["arousal"]))
+        if vad.get("dominance") is not None:
+            dominances.append(float(vad["dominance"]))
+
+    if valences:
+        memory.learned_valence = round(sum(valences) / len(valences), 3)
+    if arousals:
+        memory.learned_arousal = round(sum(arousals) / len(arousals), 3)
+    if dominances:
+        memory.learned_dominance = round(sum(dominances) / len(dominances), 3)
+
+    memory.selection_count = total
 
     # --- Write aggregated memory ---
     if tones:
