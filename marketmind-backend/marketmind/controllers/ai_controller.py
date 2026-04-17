@@ -270,12 +270,12 @@ def generate_text_variants(
     pres_penalty = round(eff_dominance * 0.5, 2) if eff_dominance is not None else 0.1
 
     angle_a = (
-        "Creative brief for Variant A: emotional storytelling. "
-        "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
+        "Variant A wording style: benefit-led and structured. "
+        "Lead with the key benefit and use clear, direct phrasing."
     )
     angle_b = (
-        "Creative brief for Variant B: direct performance style. "
-        "Lead with concrete value, include one specific benefit, and end with a clear action."
+        "Variant B wording style: problem-led and conversational. "
+        "Open with a relatable problem and address it naturally."
     )
 
     shared_kwargs = dict(
@@ -300,8 +300,8 @@ def generate_text_variants(
     # If outputs are too close, force a sharper second style split for B.
     if variant_a.strip().lower() == variant_b.strip().lower():
         fallback_b = (
-            "Creative brief for Variant B: concise, punchy, and utility-first. "
-            "Use different wording from any storytelling style and focus on one measurable outcome."
+            "Variant B wording style: concise and outcome-focused. "
+            "Use different phrasing from Variant A and focus on one measurable result."
         )
         variant_b = generate_marketing_text(description=f"{description} {fallback_b}", temperature=temp_b, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
 
@@ -420,13 +420,13 @@ def regenerate_text(content_id: int, instruction: str = "") -> dict:
     instruction_line = f"\nUser instruction: {instruction.strip()}" if instruction and instruction.strip() else ""
 
     angle_a = (
-        "Creative brief for Variant A: emotional storytelling. "
-        "Start with a relatable moment, paint one vivid scene, and use a warm human voice."
+        "Variant A wording style: benefit-led and structured. "
+        "Lead with the key benefit and use clear, direct phrasing."
         + instruction_line
     )
     angle_b = (
-        "Creative brief for Variant B: direct performance style. "
-        "Lead with concrete value, include one specific benefit, and end with a clear action."
+        "Variant B wording style: problem-led and conversational. "
+        "Open with a relatable problem and address it naturally."
         + instruction_line
     )
 
@@ -450,8 +450,8 @@ def regenerate_text(content_id: int, instruction: str = "") -> dict:
 
     if variant_a.strip().lower() == variant_b.strip().lower():
         fallback_b = (
-            "Creative brief for Variant B: concise, punchy, and utility-first. "
-            "Use different wording from any storytelling style and focus on one measurable outcome."
+            "Variant B wording style: concise and outcome-focused. "
+            "Use different phrasing from Variant A and focus on one measurable result."
         )
         variant_b = generate_marketing_text(description=f"{description} {fallback_b}", **shared_kwargs)
 
