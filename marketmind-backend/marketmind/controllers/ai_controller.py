@@ -254,29 +254,42 @@ def generate_text_variants(
     vad_instruction = _vad_prompt_instruction(eff_valence, eff_arousal, eff_dominance)
     effective_tone = tone if not vad_instruction else ""
 
-    # Temperature — from eff_arousal if available, else neutral base
+    # Variant A sits at the lower bound of the VAD-constrained parameter range (tighter, more controlled).
+    # Variant B sits at the upper bound (looser, more expressive).
+    # Both honour the same emotional target — they explore opposite ends of the allowed range.
+    _DELTA_TEMP    = 0.07
+    _DELTA_TOP_P   = 0.05
+    _DELTA_PENALTY = 0.05
+
     if eff_arousal is not None:
-        temp_a = round(0.5 + (eff_arousal * 0.4), 2)
-        temp_b = round(0.5 + (eff_arousal * 0.4), 2)
+        base_temp  = round(0.5 + (eff_arousal * 0.4), 2)
+        base_top_p = round(0.7 + (eff_arousal * 0.3), 2)
     else:
-        temp_a = 0.7
-        temp_b = 0.7
+        base_temp  = 0.70
+        base_top_p = 0.85
 
-    # top_p — from eff_arousal if available, else neutral base
-    top_p = round(0.7 + (eff_arousal * 0.3), 2) if eff_arousal is not None else 0.85
+    # Once the user has enough selection history, bias the centre of the range
+    # toward their preferred end (A = tighter, B = looser).
+    # Mirrors the HISTORY_THRESHOLD used for history-driven VAD mode.
+    if memory and (memory.get("selection_count") or 0) >= HISTORY_THRESHOLD and memory.get("preferred_creativity") is not None:
+        bias = (0.5 - memory["preferred_creativity"]) * 0.10
+        base_temp  = round(max(0.50, min(0.90, base_temp  + bias)), 2)
+        base_top_p = round(max(0.70, min(1.00, base_top_p + (bias * 0.5))), 2)
 
-    # frequency and presence penalty — from eff_dominance if available, else neutral base
-    freq_penalty = round(eff_dominance * 0.5, 2) if eff_dominance is not None else 0.1
-    pres_penalty = round(eff_dominance * 0.5, 2) if eff_dominance is not None else 0.1
+    temp_a  = round(max(0.50, base_temp  - _DELTA_TEMP),  2)
+    temp_b  = round(min(0.90, base_temp  + _DELTA_TEMP),  2)
+    top_p_a = round(max(0.70, base_top_p - _DELTA_TOP_P), 2)
+    top_p_b = round(min(1.00, base_top_p + _DELTA_TOP_P), 2)
 
-    angle_a = (
-        "Variant A wording style: benefit-led and structured. "
-        "Lead with the key benefit and use clear, direct phrasing."
-    )
-    angle_b = (
-        "Variant B wording style: problem-led and conversational. "
-        "Open with a relatable problem and address it naturally."
-    )
+    if eff_dominance is not None:
+        base_penalty = round(eff_dominance * 0.5, 2)
+    else:
+        base_penalty = 0.10
+
+    freq_penalty_a = round(max(0.00, base_penalty - _DELTA_PENALTY), 2)
+    freq_penalty_b = round(min(0.50, base_penalty + _DELTA_PENALTY), 2)
+    pres_penalty_a = freq_penalty_a
+    pres_penalty_b = freq_penalty_b
 
     shared_kwargs = dict(
         business_name=business_name,
@@ -294,16 +307,12 @@ def generate_text_variants(
         ) + memory_instruction,
     )
 
-    variant_a = generate_marketing_text(description=f"{description} {angle_a}", temperature=temp_a, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
-    variant_b = generate_marketing_text(description=f"{description} {angle_b}", temperature=temp_b, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
+    variant_a = generate_marketing_text(description=description, temperature=temp_a, top_p=top_p_a, frequency_penalty=freq_penalty_a, presence_penalty=pres_penalty_a, **shared_kwargs)
+    variant_b = generate_marketing_text(description=description, temperature=temp_b, top_p=top_p_b, frequency_penalty=freq_penalty_b, presence_penalty=pres_penalty_b, **shared_kwargs)
 
-    # If outputs are too close, force a sharper second style split for B.
+    # If outputs are identical, push B to the ceiling of the allowed temperature range.
     if variant_a.strip().lower() == variant_b.strip().lower():
-        fallback_b = (
-            "Variant B wording style: concise and outcome-focused. "
-            "Use different phrasing from Variant A and focus on one measurable result."
-        )
-        variant_b = generate_marketing_text(description=f"{description} {fallback_b}", temperature=temp_b, top_p=top_p, frequency_penalty=freq_penalty, presence_penalty=pres_penalty, **shared_kwargs)
+        variant_b = generate_marketing_text(description=description, temperature=min(0.90, temp_b + 0.07), top_p=top_p_b, frequency_penalty=freq_penalty_b, presence_penalty=pres_penalty_b, **shared_kwargs)
 
     if not variant_a or not variant_a.strip():
         raise ValueError("AI returned empty output for variant A")
@@ -418,17 +427,16 @@ def regenerate_text(content_id: int, instruction: str = "") -> dict:
     region           = f.get("region", "UK")
 
     instruction_line = f"\nUser instruction: {instruction.strip()}" if instruction and instruction.strip() else ""
+    description_with_instruction = f"{description}{instruction_line}"
 
-    angle_a = (
-        "Variant A wording style: benefit-led and structured. "
-        "Lead with the key benefit and use clear, direct phrasing."
-        + instruction_line
-    )
-    angle_b = (
-        "Variant B wording style: problem-led and conversational. "
-        "Open with a relatable problem and address it naturally."
-        + instruction_line
-    )
+    # Default parameter split — no VAD context available on regeneration.
+    # A is tighter (lower bound), B is looser (upper bound).
+    temp_a, temp_b         = 0.63, 0.77
+    top_p_a, top_p_b       = 0.80, 0.90
+    freq_penalty_a         = 0.05
+    freq_penalty_b         = 0.15
+    pres_penalty_a         = 0.05
+    pres_penalty_b         = 0.15
 
     memory = get_brand_memory(user_id)
     memory_instruction = augment_prompt_with_memory("", memory) if memory else ""
@@ -445,15 +453,11 @@ def regenerate_text(content_id: int, instruction: str = "") -> dict:
         campaign_instruction=memory_instruction,
     )
 
-    variant_a = generate_marketing_text(description=f"{description} {angle_a}", **shared_kwargs)
-    variant_b = generate_marketing_text(description=f"{description} {angle_b}", **shared_kwargs)
+    variant_a = generate_marketing_text(description=description_with_instruction, temperature=temp_a, top_p=top_p_a, frequency_penalty=freq_penalty_a, presence_penalty=pres_penalty_a, **shared_kwargs)
+    variant_b = generate_marketing_text(description=description_with_instruction, temperature=temp_b, top_p=top_p_b, frequency_penalty=freq_penalty_b, presence_penalty=pres_penalty_b, **shared_kwargs)
 
     if variant_a.strip().lower() == variant_b.strip().lower():
-        fallback_b = (
-            "Variant B wording style: concise and outcome-focused. "
-            "Use different phrasing from Variant A and focus on one measurable result."
-        )
-        variant_b = generate_marketing_text(description=f"{description} {fallback_b}", **shared_kwargs)
+        variant_b = generate_marketing_text(description=description_with_instruction, temperature=min(0.90, temp_b + 0.07), top_p=top_p_b, frequency_penalty=freq_penalty_b, presence_penalty=pres_penalty_b, **shared_kwargs)
 
     if not variant_a or not variant_a.strip():
         raise ValueError("AI returned empty output for variant A")

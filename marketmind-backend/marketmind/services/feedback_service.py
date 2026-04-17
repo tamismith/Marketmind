@@ -59,12 +59,7 @@ def update_brand_memory_from_selection(
     user_id: int,
     selected_text: str,
 ) -> Dict:
-    """
-    Update and persist brand memory by aggregating across the full selection
-    history for this user. Rather than overwriting with the most recent
-    selection, memory reflects the dominant pattern across all past choices —
-    building a brand language that improves with every interaction.
-    """
+    
     memory = BrandMemory.query.filter_by(user_id=user_id).first()
     if not memory:
         memory = BrandMemory(user_id=user_id)
