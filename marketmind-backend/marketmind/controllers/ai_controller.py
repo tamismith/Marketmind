@@ -276,8 +276,9 @@ def generate_text_variants(
     # Once the user has enough selection history, bias the centre of the range
     # toward their preferred end (A = tighter, B = looser).
     # Applies to all four parameters — arousal-derived and dominance-derived.
-    # Mirrors the HISTORY_THRESHOLD used for history-driven VAD mode.
-    if memory and (memory.get("selection_count") or 0) >= HISTORY_THRESHOLD and memory.get("preferred_creativity") is not None:
+    # Only active in history_driven mode — in vad_driven mode the user has set
+    # explicit targets and the parameters should reflect those exactly.
+    if generation_mode == "history_driven" and memory and (memory.get("selection_count") or 0) >= HISTORY_THRESHOLD and memory.get("preferred_creativity") is not None:
         bias = (0.5 - memory["preferred_creativity"]) * 0.10
         base_temp    = round(max(0.50, min(0.90, base_temp    + bias)),        2)
         base_top_p   = round(max(0.70, min(1.00, base_top_p   + (bias * 0.5))), 2)
