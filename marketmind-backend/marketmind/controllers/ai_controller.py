@@ -268,23 +268,25 @@ def generate_text_variants(
         base_temp  = 0.70
         base_top_p = 0.85
 
+    if eff_dominance is not None:
+        base_penalty = round(eff_dominance * 0.5, 2)
+    else:
+        base_penalty = 0.10
+
     # Once the user has enough selection history, bias the centre of the range
     # toward their preferred end (A = tighter, B = looser).
+    # Applies to all four parameters — arousal-derived and dominance-derived.
     # Mirrors the HISTORY_THRESHOLD used for history-driven VAD mode.
     if memory and (memory.get("selection_count") or 0) >= HISTORY_THRESHOLD and memory.get("preferred_creativity") is not None:
         bias = (0.5 - memory["preferred_creativity"]) * 0.10
-        base_temp  = round(max(0.50, min(0.90, base_temp  + bias)), 2)
-        base_top_p = round(max(0.70, min(1.00, base_top_p + (bias * 0.5))), 2)
+        base_temp    = round(max(0.50, min(0.90, base_temp    + bias)),        2)
+        base_top_p   = round(max(0.70, min(1.00, base_top_p   + (bias * 0.5))), 2)
+        base_penalty = round(max(0.00, min(0.50, base_penalty + (bias * 0.5))), 2)
 
     temp_a  = round(max(0.50, base_temp  - _DELTA_TEMP),  2)
     temp_b  = round(min(0.90, base_temp  + _DELTA_TEMP),  2)
     top_p_a = round(max(0.70, base_top_p - _DELTA_TOP_P), 2)
     top_p_b = round(min(1.00, base_top_p + _DELTA_TOP_P), 2)
-
-    if eff_dominance is not None:
-        base_penalty = round(eff_dominance * 0.5, 2)
-    else:
-        base_penalty = 0.10
 
     freq_penalty_a = round(max(0.00, base_penalty - _DELTA_PENALTY), 2)
     freq_penalty_b = round(min(0.50, base_penalty + _DELTA_PENALTY), 2)
