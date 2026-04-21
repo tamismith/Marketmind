@@ -7,7 +7,7 @@ const initialForm = {
   platform: "",
   description: "",
   goal: "",
-  length: "",
+  length: "short",
   region: "",
 };
 
@@ -16,7 +16,7 @@ const initialAdForm = {
   platform: "",
   description: "",
   goal: "",
-  length: "",
+  length: "short",
   region: "",
   offer: "",
   cta: "",
@@ -527,7 +527,13 @@ export default function Generate() {
 
             <div className="formGrid4">
               <input className="input" name="tone" placeholder="Tone (optional if campaign VAD set)" value={form.tone} onChange={onChange} />
-              <input className="input" name="platform" placeholder="Platform" value={form.platform} onChange={onChange} required />
+              <select className="input" name="platform" value={form.platform} onChange={onChange} required>
+                <option value="">Select Platform</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="twitter/x">Twitter/X</option>
+              </select>
             </div>
 
             {/* Advanced toggle */}
@@ -544,8 +550,18 @@ export default function Generate() {
             {showTextAdvanced ? (
               <div className="formGrid4" style={{ marginTop: 8 }}>
                 <input className="input" name="goal" placeholder="Goal (optional)" value={form.goal} onChange={onChange} />
-                <input className="input" name="length" placeholder="Length" value={form.length} onChange={onChange} />
-                <input className="input" name="region" placeholder="Region override" value={form.region} onChange={onChange} />
+                <select className="input" name="length" value={form.length} onChange={onChange}>
+                  <option value="short">Length: Short</option>
+                  <option value="medium">Length: Medium</option>
+                </select>
+                <select className="input" name="region" value={form.region} onChange={onChange}>
+                  <option value="">Region (uses profile default)</option>
+                  <option value="UK">United Kingdom</option>
+                  <option value="US">United States</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Australia">Australia</option>
+                  <option value="India">India</option>
+                </select>
               </div>
             ) : null}
 
@@ -713,7 +729,13 @@ export default function Generate() {
 
             <div className="formGrid4">
               <input className="input" name="tone" placeholder="Tone (optional if campaign VAD set)" value={adForm.tone} onChange={onAdChange} />
-              <input className="input" name="platform" placeholder="Platform" value={adForm.platform} onChange={onAdChange} required />
+              <select className="input" name="platform" value={adForm.platform} onChange={onAdChange} required>
+                <option value="">Select Platform</option>
+                <option value="instagram">Instagram</option>
+                <option value="facebook">Facebook</option>
+                <option value="linkedin">LinkedIn</option>
+                <option value="twitter/x">Twitter/X</option>
+              </select>
             </div>
 
             {/* Advanced toggle */}
@@ -731,8 +753,18 @@ export default function Generate() {
               <>
                 <div className="formGrid4" style={{ marginTop: 8 }}>
                   <input className="input" name="goal" placeholder="Goal (optional)" value={adForm.goal} onChange={onAdChange} />
-                  <input className="input" name="length" placeholder="Length" value={adForm.length} onChange={onAdChange} />
-                  <input className="input" name="region" placeholder="Region" value={adForm.region} onChange={onAdChange} />
+                  <select className="input" name="length" value={adForm.length} onChange={onAdChange}>
+                    <option value="short">Length: Short</option>
+                    <option value="medium">Length: Medium</option>
+                  </select>
+                  <select className="input" name="region" value={adForm.region} onChange={onAdChange}>
+                    <option value="">Region (uses profile default)</option>
+                    <option value="UK">United Kingdom</option>
+                    <option value="US">United States</option>
+                    <option value="Canada">Canada</option>
+                    <option value="Australia">Australia</option>
+                    <option value="India">India</option>
+                  </select>
                 </div>
 
                 <div className="gridCols2">
@@ -757,7 +789,16 @@ export default function Generate() {
                     <option value="medium">Shot: Medium</option>
                     <option value="wide">Shot: Wide</option>
                   </select>
-                  <input className="input" name="color_palette" placeholder="Palette (earthy, pastel, vibrant...)" value={adForm.color_palette} onChange={onAdChange} />
+                  <select className="input" name="color_palette" value={adForm.color_palette} onChange={onAdChange}>
+                    <option value="">Palette (none)</option>
+                    <option value="earthy">Earthy</option>
+                    <option value="pastel">Pastel</option>
+                    <option value="vibrant">Vibrant</option>
+                    <option value="corporate_blue">Corporate Blue</option>
+                    <option value="warm">Warm</option>
+                    <option value="cool">Cool</option>
+                    <option value="monochrome">Monochrome</option>
+                  </select>
                 </div>
 
                 <div className="gridCols2">
