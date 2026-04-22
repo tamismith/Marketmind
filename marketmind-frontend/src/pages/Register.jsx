@@ -4,7 +4,7 @@ import { api, setToken } from "../api/client";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ business_name: "", email: "", password: "" });
+  const [form, setForm] = useState({ business_name: "", email: "", password: "", confirm_password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -15,6 +15,12 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
+
+    if (form.password !== form.confirm_password) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -82,6 +88,16 @@ export default function Register() {
             type="password"
             placeholder="Password"
             value={form.password}
+            onChange={handleChange}
+            required
+          />
+
+          <input
+            className="input"
+            name="confirm_password"
+            type="password"
+            placeholder="Confirm password"
+            value={form.confirm_password}
             onChange={handleChange}
             required
           />
