@@ -47,6 +47,7 @@ def register():
     data = request.get_json() or {}
     email = data.get("email", "").strip().lower()
     password = data.get("password", "")
+    business_name = (data.get("business_name") or "").strip()
 
     if not email or not password:
         return error_response(
