@@ -4,7 +4,7 @@ import { api, setToken } from "../api/client";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [form, setForm] = useState({ business_name: "", email: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -23,6 +23,7 @@ export default function Register() {
         {
           email: form.email,
           password: form.password,
+          business_name: form.business_name,
         },
         { auth: false },
       );
@@ -58,9 +59,9 @@ export default function Register() {
         <form className="form" onSubmit={handleSubmit}>
           <input
             className="input"
-            name="name"
-            placeholder="Full name"
-            value={form.name}
+            name="business_name"
+            placeholder="Business name"
+            value={form.business_name}
             onChange={handleChange}
             required
           />

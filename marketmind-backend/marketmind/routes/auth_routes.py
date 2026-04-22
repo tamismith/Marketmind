@@ -72,8 +72,8 @@ def register():
     db.session.add(user)
     db.session.flush()
 
-    # Create an empty business profile for this user
-    profile = BusinessProfile(user_id=user.id)
+    # Create a business profile, pre-populated with business name if provided
+    profile = BusinessProfile(user_id=user.id, business_name=business_name or None)
     db.session.add(profile)
 
     # Create a default General campaign
