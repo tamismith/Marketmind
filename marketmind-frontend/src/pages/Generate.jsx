@@ -487,7 +487,7 @@ export default function Generate() {
             onClick={() => setGenerationMode("vad_driven")}
             style={{ fontSize: 13 }}
           >
-            VAD-Driven
+            Target-Driven
           </button>
           <button
             className={generationMode === "history_driven" ? "btn btnInline" : "btnGhost btnInline"}
@@ -499,8 +499,8 @@ export default function Generate() {
         </div>
         <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
           {generationMode === "vad_driven"
-            ? "Uses your campaign's emotional targets to guide generation."
-            : "Learns from your selection history to adapt generation automatically."}
+            ? "Generates content aimed at the emotional tone of your inputs or campaign targets. Good for a clear brief."
+            : "Uses your past selections to steer the tone and style of new generations. Good for consistency with previous content."}
         </p>
       </div>
 
@@ -526,7 +526,7 @@ export default function Generate() {
             <input className="input" name="description" placeholder="Description" value={form.description} onChange={onChange} required />
 
             <div className="formGrid4">
-              <input className="input" name="tone" placeholder="Tone (optional if campaign VAD set)" value={form.tone} onChange={onChange} />
+              <input className="input" name="tone" placeholder="Tone e.g. professional, playful, urgent (optional)" value={form.tone} onChange={onChange} />
               <select className="input" name="platform" value={form.platform} onChange={onChange} required>
                 <option value="">Select Platform</option>
                 <option value="instagram">Instagram</option>
@@ -568,6 +568,11 @@ export default function Generate() {
             <button className="btn" type="submit" disabled={isGenerating}>
               {isGenerating ? "Generating..." : "Generate A/B Variants"}
             </button>
+            {isGenerating && (
+              <div className="loadingBar">
+                <div className="loadingBarFill" />
+              </div>
+            )}
           </form>
         </div>
       ) : null}
@@ -709,6 +714,11 @@ export default function Generate() {
             >
               {isRegenerating ? "Regenerating..." : "Regenerate (1 credit)"}
             </button>
+            {isRegenerating && (
+              <div className="loadingBar" style={{ marginTop: 8 }}>
+                <div className="loadingBarFill" />
+              </div>
+            )}
             <button className="btnGhost btnInline" onClick={() => navigate("/app/history")}>
               View Saved History
             </button>
@@ -728,7 +738,7 @@ export default function Generate() {
             <input className="input" name="description" placeholder="Description" value={adForm.description} onChange={onAdChange} required />
 
             <div className="formGrid4">
-              <input className="input" name="tone" placeholder="Tone (optional if campaign VAD set)" value={adForm.tone} onChange={onAdChange} />
+              <input className="input" name="tone" placeholder="Tone e.g. professional, playful, urgent (optional)" value={adForm.tone} onChange={onAdChange} />
               <select className="input" name="platform" value={adForm.platform} onChange={onAdChange} required>
                 <option value="">Select Platform</option>
                 <option value="instagram">Instagram</option>
@@ -816,6 +826,11 @@ export default function Generate() {
             <button className="btn" type="submit" disabled={isAdGenerating}>
               {isAdGenerating ? "Generating ad..." : "Generate Ad Copy"}
             </button>
+            {isAdGenerating && (
+              <div className="loadingBar">
+                <div className="loadingBarFill" />
+              </div>
+            )}
           </form>
 
           {adErrorMessage ? <p className="statusError" style={{ marginTop: 12 }}>{adErrorMessage}</p> : null}

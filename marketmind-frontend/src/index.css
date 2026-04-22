@@ -301,6 +301,28 @@ body {
   color: #9ee6b7;
 }
 
+.loadingBar {
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.loadingBarFill {
+  height: 100%;
+  width: 40%;
+  background: var(--primary);
+  border-radius: 2px;
+  animation: loadingSlide 1.4s ease-in-out infinite;
+}
+
+@keyframes loadingSlide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
 .resultText {
   margin: 0;
   white-space: pre-wrap;
@@ -426,10 +448,79 @@ body {
   min-width: 200px;
 }
 
+.landingHow {
+  margin-bottom: 32px;
+}
+
+.landingSteps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.landingStep {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.landingStep h3 {
+  margin: 8px 0 8px 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.stepNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.landingModesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.landingModeCard {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.landingModeCard h4 {
+  margin: 8px 0 8px 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.modeTag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
 .landingGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+}
+
+.landingGrid4 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 1080px) {
@@ -461,7 +552,10 @@ body {
 
   .gridCols2,
   .gridCols3,
-  .landingGrid {
+  .landingGrid,
+  .landingGrid4,
+  .landingSteps,
+  .landingModesGrid {
     grid-template-columns: 1fr;
   }
 }

@@ -12,7 +12,7 @@ export default function DashboardLayout() {
     "/app": "Dashboard",
     "/app/generate": "Generate",
     "/app/history": "History",
-    "/app/analytics": "Campaign Analytics",
+    "/app/analytics": "Analytics",
     "/app/plans": "Plans & Credits",
     "/app/brand": "Brand Profile",
     "/app/campaigns": "Campaigns",
@@ -60,6 +60,15 @@ export default function DashboardLayout() {
           </NavLink>
 
           <NavLink
+            to="/app/campaigns"
+            className={({ isActive }) =>
+              isActive ? "navItem navItemActive" : "navItem"
+            }
+          >
+            Campaigns
+          </NavLink>
+
+          <NavLink
             to="/app/history"
             className={({ isActive }) =>
               isActive ? "navItem navItemActive" : "navItem"
@@ -74,16 +83,7 @@ export default function DashboardLayout() {
               isActive ? "navItem navItemActive" : "navItem"
             }
           >
-            Campaign Analytics
-          </NavLink>
-
-          <NavLink
-            to="/app/plans"
-            className={({ isActive }) =>
-              isActive ? "navItem navItemActive" : "navItem"
-            }
-          >
-            Plans &amp; Credits
+            Analytics
           </NavLink>
 
           <NavLink
@@ -96,12 +96,12 @@ export default function DashboardLayout() {
           </NavLink>
 
           <NavLink
-            to="/app/campaigns"
+            to="/app/plans"
             className={({ isActive }) =>
               isActive ? "navItem navItemActive" : "navItem"
             }
           >
-            Campaigns
+            Plans &amp; Credits
           </NavLink>
         </nav>
 
