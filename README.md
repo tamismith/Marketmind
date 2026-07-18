@@ -1,3 +1,4 @@
+
 # MarketMind
 
 **AI-powered marketing content generation for SMEs**
@@ -124,3 +125,6 @@ Demo accounts:
 
 ---
 
+=======
+# Marketmind
+>>>>>>> 2a016cca89930d7f6614d04f9b245d7ac5ca19cc
